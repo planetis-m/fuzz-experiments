@@ -1,0 +1,220 @@
+Introduction
+============
+
+This proposals seeks to describe the architecture of a structure aware fuzzing library for
+Nim. Two options are considered, one powered by libFuzzer. It's implementation borrows
+heavily from google/libprotobuf-mutator but without using protobuf. Instead it uses a
+simpler serialization format that translates directly to Nim types. The other weaker one,
+similar to rust-fuzz/arbirtary is not recommended. It's performance was evaluated during
+tests and it was found to be subpar.
+
+In this context structure-aware (general case), grammar-based and 'smart' refer to the
+same thing. Instructing fuzzers to mutate structured input based on some definition.
+
+Serialization format
+====================
+
+Serialize object to bytes, do not use variant length formats for integers. Object fields are
+expected in order. Refs and Options use a bool to signal if it's empty or not. For
+dynamically-sized types, seqs, strings, Tables, represent the length as an int32,
+followed by the stored elements.
+
+A way to inspect the input as human readable format might be needed. Does `$` not suffice?
+Maybe for debuging invalid input, that the reader rejects? In proto fuzzers in chromium source,
+native input is also dumped.
+
+Is a human readable format needed? Use any of the available JSON libraries.
+
+Seed corpus
+===========
+
+Just a question of serializing to file valid user provided input. Problem: the post-processor callbacks
+(if implemented) modify that input. So should toBytes run them? https://www.youtube.com/watch?v=ID8XtoMn43I
+(claims that empty seed leads to discovering more bugs). Changing the fuzzer invalidates the corpus
+(same as LPM when removing fields).
+
+Benchmark fuzzer
+================
+
+Diverse tests cases, a control (would that be LPM?) and statistical measurements required.
+Artificial tests or real libraries (inject bugs?)? What to measure, bug-count/coverage?
+Time to run? Take ideas from: https://www.youtube.com/watch?v=uevfxaJHvDA
+
+Coverage includes the code paths from this lib, any pragma to prevent that?
+
+Testing inputs
+==============
+
+Deserialize the object from the input bytes. If the next steps are done correctly, it
+should just work. Else return. Then feed it to the API being tested.
+
+Mutating data
+=============
+
+The API requires a random engine seeded by libFuzzer's seed parameter, with that we can
+make changes to the input that are reproducible. Like when removing, copying or inserting
+elements to a seq or switching branches in a variant object.
+
+Deserialize input and copy to output. From the consumed and maximum available bytes, get the size hint.
+Using random, choose a sequence of possible mutations and perform them.
+
+In case of de-serialization failure, it may need to use a default value, possibly
+user-provided. - Instead always reject first runs empty input, rest should be the one
+provided by customMutator.
+
+Run a single post-processor function afterwards of type:
+``CustomPostProcessor*[T] = proc (n: var T; seed: int64)``
+Do we need multiple callbacks (hard) or working on nested objects (doable)?
+First one would require a register table. Other just a recursive helper proc that calls
+postProcess procs for every object field. Write an example that uses state.
+
+LPM also uses a mutations cache to increase performance, since state cannot be preserved
+between runs, this is saved where? (static) Let's do without the cache for a start.
+Since there are so many invalid test inputs should we just settle with a invalidSet?
+
+If it fails to serialize returns empty.
+
+Primitive types
+---------------
+
+Call libFuzzer's mutate directly, this way we are provided with "interesting" values
+(values that may expand the code coverage, extracted from libFuzzer's instrumentation),
+instead of flipping random bits ourselves.
+
+String, (seq/array of bytes)
+----------------------------
+
+Call mutate as above. Valid UTF8 strings can also be provided by porting LPM's fixUtf8.
+
+Enums
+-----
+
+Enums work the same, it does require though a macro to handle enums with holes correctly.
+Prototype: https://gist.github.com/planetis-m/274cae6865813fe9510ddbdd5aafa582
+
+Seqs, Tables, other dynamic data-structures.
+--------------------------------------------
+
+Not different from what described in the section and also in "User-defined overloads".
+Prototype: https://gist.github.com/planetis-m/e54014bca29dd58d887e4c069bac8594
+
+Variant objects
+---------------
+
+Prototype: https://gist.github.com/planetis-m/a157bbfcea532770ec35bfcfeddcebc0
+Switch should be within mutate, needs a macro. Copy/merge also needs a macro, due to
+fields iterator limitations.
+
+References
+----------
+
+Limit recursion depth, another API addition (maxDepth)?
+
+Distincts
+---------
+
+Use distinct to provide custom mutators for base types that have interesting values,
+like file signatures (as an alternative to just letting mutate provide them) or to limit
+the search space (but then you might still want to allow evil values).
+
+When not using intermediate fake types, the user has to resort to this pattern:
+`when defined(fuzzer): field: distinct type else: field type` in object declarations.
+This will not work if you're not in control of the fuzzed code.
+
+User-defined overloads
+----------------------
+
+Users need to specialize the generic ``proc mutate[T](x: var T; sizeIncreaseHint: Natural;
+r: var Rand)``. The implementation consists of a state machine that performs random
+mutations in a row. Would either call mutate on the items or provide special values.
+
+The issue we are trying to prevent here, is producing mutations that don't fit in the output buffer
+(thus called invalid). The more invalid mutations, the longer the fuzzers runs.
+
+To teach the fuzzer how to traverse containers, two overloads must be provided.
+
+```nim
+proc combine[T; U: not MyContainer](x: var MyContainer[T], y: U, depth: int, res: var int) =
+  for v in x.mitems:
+    when compiles(combine(v, y, depth, res)): combine(v, y, depth, res)
+
+proc combine[T; U](x: var T, y: MyContainer[U], depth: int, res: var int) =
+  for v in y.items:
+    when compiles(combine(x, v, depth, res)): combine(x, v, depth, res)
+```
+
+For potentially dynamic types, you must use a recursion guard (if depth <= MaxDepth, an
+intdefine) and increament the depth variable. Some containers do not allow modification of
+their values (sets). In that case a plain copy is performed.
+
+```nim
+proc combine[T](x: var MyContainer[T], y: MyContainer[T], depth: int, res: var int) =
+  select: x = y
+```
+
+Alternatively, implement a merge algorithm? Harder, need a sizeIncreaseHint parameter and
+to teach the user about byteSize.
+
+Crossover data
+==============
+
+Another function that needs to be provided to libFuzzer. Given two inputs, create a
+mutation that borrows from both with equal probability. Should use the same code as the
+mutation implementation above.
+
+Need merge overload `proc merge[T](dest: var T; src: T)` for every type that adds src
+items to dest for collections In optional types src replaces dest if it's set. In any
+other case it always replaces dest.
+
+Sequence of actions
+===================
+
+Meant to test stateful API's. Examples include https://gitlab.com/wilzegers/autotest/ and
+the ones discussed in https://github.com/google/fuzzing/blob/master/docs/structure-aware-fuzzing.md#fuzzing-stateful-apis
+Needs a way to serialize procs, with their arguments. Possibly similar to variant objects.
+
+Alternative design
+==================
+
+Only concerns the step of testing inputs (testOneInput). Seed the random generator with
+the length of the input bytes. Return early if the byte input may not suffice to fill all
+input types.
+
+We have no knowledge of how many bytes we might end up using in advance! Try to guess the
+size of dynamically-sized types with sizeHint overloads. Or extract a length from the
+input bytes bound to the size, which may consumes all available bytes, so use two
+different APIs.
+
+Use the random engine when needed, like which branch to use in a variant object.
+
+There are some downsides:
+
+- Users are encouraged to provide themselves sensible lower or upper limits for dynamic
+  types. Needs overriding sizeHints for specified fields.
+- Will not expand fuzzing coverage as quickly, fuzzer blindly inserts interesting values
+  in random spots (so they are wasted). Also it almost never return the exact byte size we
+  end up using.
+- No post-processor step possible (really?). No way to insert dependencies between data,
+  need user effort to guard against large allocations.
+
+On the upside, it is simpler to implement, and will work with more fuzzers other than libFuzzer.
+Prototype: https://gist.github.com/planetis-m/4c79f55e3040af9fb7b509809e43f342
+
+Other options considered
+========================
+
+[gofuzz](https://github.com/google/gofuzz) Smart fuzzer for Go, similar to the section above.
+
+TODO
+====
+
+Skim the code for interesting ideas in:
+
+- [AFLSmart](https://github.com/aflsmart/aflsmart) Uses Peach pit files, works with adding,
+    removing, splicing 'chunks'. Specific to binary formats. Assigns a percentage for invalid inputs.
+
+Generational
+------------
+- [FormatFuzzer](https://github.com/uds-se/FormatFuzzer) fuzzes binary files, works with binary templates.
+- [Peach Fuzzer](https://gitlab.com/gitlab-org/security-products/protocol-fuzzer-ce) Weird XML scheme, specialized for Fuzzers
+- More in ClusterFuzz (Where? Were they moved?)

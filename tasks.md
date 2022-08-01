@@ -25,3 +25,4 @@ Tasks breakdown DRAFT
 - [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate
 - [ ] Finish the serialization from buffer to types.
 - [ ] Write mutate overloads for most types + merge.
+- [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. 1/8-

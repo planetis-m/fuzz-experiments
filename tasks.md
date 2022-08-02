@@ -26,4 +26,5 @@ Tasks breakdown DRAFT
 - [ ] Finish the serialization from buffer to types.
 - [ ] Write mutate overloads for most types + merge.
 - [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. 1/8-
-- [ ] Find out how to disable coverage for the fuzzers functions. __attribute__((no_sanitize("coverage"))) or __attribute__((disable_sanitizer_instrumentation)) ?
+- [X] Find out how to disable coverage for the fuzzers functions.
+- [ ] Read libFuzzer mutator's source file.

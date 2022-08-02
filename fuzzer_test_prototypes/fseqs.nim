@@ -1,5 +1,7 @@
 import random
 
+{.pragma: noCoverage, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
+
 proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
 
 proc fuzzMe(s: seq[int32]) =
@@ -11,7 +13,7 @@ type
     data: ptr UncheckedArray[byte]
     pos, len: int
 
-proc toUnstructured*(data: ptr UncheckedArray[byte]; len: int): Unstructured =
+proc toUnstructured*(data: ptr UncheckedArray[byte]; len: int): Unstructured {.noCoverage.} =
   Unstructured(data: data, pos: 0, len: len)
 
 proc setPosition(x: var Unstructured, pos: int) =
@@ -48,7 +50,7 @@ proc write(x: var Unstructured; v: seq[int32]) =
   if v.len > 0:
     writeData(x, addr v[0], v.len * sizeof(int32))
 
-proc initFromBin(dst: var seq[int32]; x: var Unstructured) =
+proc initFromBin(dst: var seq[int32]; x: var Unstructured) {.noCoverage.} =
   let len = int x.readInt32()
   dst.setLen(len)
   if len > 0:

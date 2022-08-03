@@ -144,36 +144,6 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
   var u = toUnstructured(data, len)
   var r = initRand(len)
   initFromBin(x, u)
-  discard mutate(x, r, r.rand(GrowOrShrink))
+  discard mutate(x, r, Shrink)
   let res = sum(x)
   if isNaN(res): echo "PANIC!"; quitOrDebug()
-
-proc customCrossOver(data1: ptr UncheckedArray[byte], len1: int,
-    data2: ptr UncheckedArray[byte], len2: int, res: ptr UncheckedArray[byte],
-    maxResLen: int, seed: int64): int {.
-    exportc: "LLVMFuzzerCustomCrossOver".} =
-
-  var copy1: seq[float]
-  var readStr1 = toUnstructured(data1, len1)
-  initFromBin(copy1, readStr1)
-
-  var copy2: seq[float]
-  var readStr2 = toUnstructured(data2, len2)
-  initFromBin(copy2, readStr2)
-
-  let len = min(copy1.len, min(copy2.len, (maxResLen - sizeof(int32)) div sizeof(float)))
-  if len == 0: return
-  var buf = newSeq[float](len)
-
-  var r = initRand(seed)
-  for i in 0 ..< buf.len:
-    buf[i] = if r.rand(bool): copy1[i]
-             else: copy2[i]
-
-  discard mutate(buf, r, Shrink)
-  result = buf.byteSize
-  if result <= maxResLen:
-    var writeStr = toUnstructured(res, maxResLen)
-    writeStr.write(buf)
-  else:
-    result = len

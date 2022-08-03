@@ -39,7 +39,7 @@ proc read[T](x: var Unstructured, result: var T) =
   if readData(x, addr(result), sizeof(T)) != sizeof(T):
     quitOrDebug()
 
-proc readInt32*(x: var Unstructured): int32 =
+proc readInt32(x: var Unstructured): int32 =
   read(x, result)
 
 proc write[T](x: var Unstructured, v: T) =

@@ -1,6 +1,6 @@
 import std/[random, fenv, math]
 
-# EXAMPLE FAILS TO MINIMISE THE CRASH in 6min!
+# EXAMPLE FAILS TO MINIMISE THE CRASH in 6min! Can't crossover.
 
 type
   FloatSeq = distinct seq[float]

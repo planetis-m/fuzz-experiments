@@ -28,3 +28,4 @@ Tasks breakdown DRAFT
 - [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. 1/8-
 - [X] Find out how to disable coverage for the fuzzers functions.
 - [ ] Read libFuzzer mutator's source file.
+- [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover

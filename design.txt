@@ -8,8 +8,9 @@ simpler serialization format that translates directly to Nim types. The other we
 similar to rust-fuzz/arbirtary is not recommended. It's performance was evaluated during
 tests and it was found to be subpar.
 
-In this context structure-aware (general case), grammar-based and 'smart' refer to the
-same thing. Instructing fuzzers to mutate structured input based on some definition.
+By different accounts grammar-based fuzzers outperform mutation based ones. This is an
+attempt to fuse them, a way to do user-provided smart mutations based on context, along
+with unguided, more general-purpose library provided ones.
 
 Serialization format
 ====================
@@ -32,6 +33,10 @@ Just a question of serializing to file valid user provided input. Problem: the p
 (if implemented) modify that input. So should toBytes run them? https://www.youtube.com/watch?v=ID8XtoMn43I
 (claims that empty seed leads to discovering more bugs). Changing the fuzzer invalidates the corpus
 (same as LPM when removing fields).
+
+In the unexplored field of automatically generating seed inputs from usage, an idea worth
+exploring is using macro transformations that gather structured traces and work similar to
+the existing coverage macros available (coverage, hcoverage).
 
 Benchmark fuzzer
 ================
@@ -151,6 +156,8 @@ their values (sets). In that case a plain copy is performed.
 proc combine[T](x: var MyContainer[T], y: MyContainer[T], depth: int, res: var int) =
   select: x = y
 ```
+
+Downside: Exponetial number of generated procs!
 
 Alternatively, implement a merge algorithm? Harder, need a sizeIncreaseHint parameter and
 to teach the user about byteSize.

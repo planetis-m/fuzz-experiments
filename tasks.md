@@ -29,3 +29,4 @@ Tasks breakdown DRAFT
 - [X] Find out how to disable coverage for the fuzzers functions.
 - [ ] Read libFuzzer mutator's source file.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
+- [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8

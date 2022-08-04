@@ -4,9 +4,12 @@ import std/[random, math, fenv, sequtils]
 
 # Experiment with custom mutator + reading zero bytes when the buffer is exhausted.
 # Stress it with -max_len=10
+# Notes: Seems to work well! Writing good mutators is hard, need to find ready made ones.
+# Problem: All test cases size is same as maxlen, sizeIncreaseHint seems essential.
 
 type
   GrowOrShrink = enum
+    None,
     Grow, # Make `x` bigger.
     Shrink, # Make `x` smaller.
 
@@ -30,16 +33,35 @@ proc mutate[T](v: var T; r: var Rand) =
   zeroMem(v.addr +! size, sizeof(T) - size)
 
 proc mutate[T](x: var seq[T], r: var Rand) =
-  case r.rand(GrowOrShrink)
-  of GrowOrShrink.Grow:
-    if x.len >= 10: return
-    let oldLen = x.len
-    x.setLen(r.rand(oldLen + 1..10))
-    for i in oldLen..<x.len: mutate(x[i], r)
-  of GrowOrShrink.Shrink:
-    if x.len == 0: return
-    x.shrink(r.rand(0..x.len - 1))
-  else: discard
+  let oldLen = x.len
+  while x.len > 0 and r.rand(bool):
+    x.delete(rand(r, x.high))
+  while r.rand(bool):
+    let index = rand(r, x.len)
+    var tmp = default(T)
+    mutate(tmp, r)
+    x.insert(tmp, index)
+  if x.len != oldLen:
+    return
+  if x.len == 0:
+    var tmp = default(T)
+    mutate(tmp, r)
+    x.add(tmp)
+  else:
+    let index = rand(r, x.high)
+    mutate(x[index], r)
+
+#proc mutate[T](x: var seq[T], r: var Rand) =
+  #case r.rand(GrowOrShrink)
+  #of GrowOrShrink.Grow:
+    #if x.len >= 10: return # magic value!
+    #let oldLen = x.len
+    #x.setLen(r.rand(oldLen + 1..10))
+    #for i in oldLen..<x.len: mutate(x[i], r)
+  #of GrowOrShrink.Shrink:
+    #if x.len == 0: return
+    #x.shrink(r.rand(0..x.len - 1))
+  #else: discard
 
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =
   Unstructured(data: data, pos: 0, len: len)

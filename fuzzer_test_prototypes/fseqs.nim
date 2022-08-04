@@ -85,15 +85,11 @@ proc mutate[T](v: T; r: var Rand): T =
   let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
   zeroMem(result.addr +! size, sizeof(T) - size)
 
-proc randBool(r: var Rand; n = 2): bool {.inline.} =
-  # Return true with probability about 1-of-n.
-  r.rand(n-1) == 0
-
 proc mutate(value: sink seq[int32]; sizeIncreaseHint: int; r: var Rand): seq[int32] =
   result = value
-  while result.len > 0 and randBool(r):
+  while result.len > 0 and r.rand(bool):
     result.delete(rand(r, high(result)))
-  while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and randBool(r):
+  while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, len(result))
     result.insert(mutate(default(int32), r), index)
   if result != value:
@@ -141,7 +137,7 @@ proc customCrossOver(data1: ptr UncheckedArray[byte], len1: int,
 
   var gen = initRand(seed)
   for i in 0 ..< buf.len:
-    buf[i] = if randBool(gen): copy1[i]
+    buf[i] = if r.rand(bool): copy1[i]
              else: copy2[i]
 
   result = buf.byteSize

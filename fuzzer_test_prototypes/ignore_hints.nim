@@ -1,9 +1,9 @@
-import std/[random, math, fenv, sequtils]
+import std/[random, math, fenv, sequtils, strutils]
 
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
 # Experiment with custom mutator + reading zero bytes when the buffer is exhausted.
-# Stress it with -max_len=10
+# Stress it with -max_len=16
 # Notes: Seems to work well! Writing good mutators is hard, need to find ready made ones.
 # Problem: All test cases size is same as maxlen, sizeIncreaseHint seems essential.
 
@@ -16,6 +16,11 @@ type
   Unstructured = object
     data: ptr UncheckedArray[byte]
     pos, len: int
+
+var
+  total = 0
+  valid = 0
+  step = 0
 
 proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
 
@@ -120,6 +125,11 @@ proc fuzzMe(s: seq[int32]) =
   if s == @[0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32]:
     echo "PANIC!"; quitOrDebug()
 
+proc printStats() {.noCov.} =
+  inc step
+  if step mod 100_000 == 0:
+    echo "Valid inputs (%) ", formatFloat(valid/total*100)
+
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
@@ -127,12 +137,14 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
   var x: seq[int32] = @[]
   var u = toUnstructured(data, len)
   initFromBin(x, u)
+  printStats()
   fuzzMe(x)
 
 proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =
   #if len < sizeof(int32): return
   var x: seq[int32] = @[]
+  inc total
   var u = toUnstructured(data, len)
   initFromBin(x, u)
   var r = initRand(seed)
@@ -142,6 +154,7 @@ proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64
   write(tmp, pos, x)
   result = tmp.len
   if result <= maxLen:
+    inc valid
     copyMem(data, addr tmp[0], result)
   else:
     result = len

@@ -27,7 +27,7 @@ Tasks breakdown DRAFT
 - [ ] Write mutate overloads for most types + merge.
 - [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. 1/8-
 - [X] Find out how to disable coverage for the fuzzers functions.
-- [ ] Read libFuzzer mutator's source file.
+- [X] Read libFuzzer mutator's source file.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
 - [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8
 - [X] Experiment with the idea of filling up with zeros and ignore len/maxLen. (1h) 4/8

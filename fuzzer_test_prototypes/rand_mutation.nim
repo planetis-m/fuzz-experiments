@@ -60,12 +60,14 @@ proc mutate[T](x: var seq[T], r: var Rand,
   case tmp
   of GrowOrShrink.Grow:
     if x.len >= 10: return
-    let oldLen = x.len
-    x.setLen(r.rand(oldLen + 1..10))
-    for i in oldLen..<x.len: mutate(x[i], r, growOrShrink)
+    x.grow(r.rand(x.len + 1..10), default(T))
+    for y in mitems(x):
+      mutate(y, r, growOrShrink)
   of GrowOrShrink.Shrink:
     if x.len == 0: return
     x.shrink(r.rand(0..x.len - 1))
+    for y in mitems(x):
+      mutate(y, r, growOrShrink)
   else: discard
 
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =

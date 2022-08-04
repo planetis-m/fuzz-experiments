@@ -48,7 +48,7 @@ proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
-proc mutate[T](v: T; r: var Rand; growOrShrink: GrowOrShrink) =
+proc mutate[T](v: var T; r: var Rand; growOrShrink: GrowOrShrink) =
   let size = mutate(cast[ptr UncheckedArray[byte]](addr v), sizeof(T), sizeof(T))
   zeroMem(v.addr +! size, sizeof(T) - size)
 
@@ -60,14 +60,12 @@ proc mutate[T](x: var seq[T], r: var Rand,
   case tmp
   of GrowOrShrink.Grow:
     if x.len >= 10: return
-    x.grow(r.rand(x.len + 1..10), default(T))
-    for y in mitems(x):
-      mutate(y, r, growOrShrink)
+    let oldLen = x.len
+    x.setLen(r.rand(oldLen + 1..10))
+    for i in oldLen..<x.len: mutate(x[i], r, growOrShrink)
   of GrowOrShrink.Shrink:
     if x.len == 0: return
     x.shrink(r.rand(0..x.len - 1))
-    for y in mitems(x):
-      mutate(y, r, growOrShrink)
   else: discard
 
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =

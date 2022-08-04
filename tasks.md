@@ -30,4 +30,4 @@ Tasks breakdown DRAFT
 - [ ] Read libFuzzer mutator's source file.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
 - [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8
-- [ ] Experiment with the idea of filling up with zeros and ignore len/maxLen
+- [X] Experiment with the idea of filling up with zeros and ignore len/maxLen. (1h) 4/8

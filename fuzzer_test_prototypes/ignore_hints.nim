@@ -3,6 +3,7 @@ import std/[random, math, fenv, sequtils]
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
 # Experiment with custom mutator + reading zero bytes when the buffer is exhausted.
+# Stress it with -max_len=10
 
 type
   GrowOrShrink = enum
@@ -24,7 +25,7 @@ proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
-proc mutate[T](v: T; r: var Rand) =
+proc mutate[T](v: var T; r: var Rand) =
   let size = mutate(cast[ptr UncheckedArray[byte]](addr v), sizeof(T), sizeof(T))
   zeroMem(v.addr +! size, sizeof(T) - size)
 
@@ -32,14 +33,12 @@ proc mutate[T](x: var seq[T], r: var Rand) =
   case r.rand(GrowOrShrink)
   of GrowOrShrink.Grow:
     if x.len >= 10: return
-    x.grow(r.rand(x.len + 1..10), default(T))
-    for y in mitems(x):
-      mutate(y, r)
+    let oldLen = x.len
+    x.setLen(r.rand(oldLen + 1..10))
+    for i in oldLen..<x.len: mutate(x[i], r)
   of GrowOrShrink.Shrink:
     if x.len == 0: return
     x.shrink(r.rand(0..x.len - 1))
-    for y in mitems(x):
-      mutate(y, r)
   else: discard
 
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =
@@ -73,7 +72,7 @@ proc intInRange[T: SomeInteger](u: var Unstructured; x: Slice[T]): T =
   result = cast[T](x.a.BiggestUInt + res)
 
 proc initFromBin[T](dst: var seq[T]; x: var Unstructured) {.noCov.} =
-  let len = x.intInRange(0'i32..10'i32)
+  let len = readInt32(x) #x.intInRange(0'i32..10'i32) gives better results
   dst.setLen(len)
   if len > 0:
     let bLen = len * sizeof(T)
@@ -99,25 +98,22 @@ proc fuzzMe(s: seq[int32]) =
   if s == @[0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32]:
     echo "PANIC!"; quitOrDebug()
 
-proc initRandom(seed: int64): Rand {.noCov.} = initRand(seed)
-
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
   if len < sizeof(int32): return
   var x: seq[int32] = @[]
   var u = toUnstructured(data, len)
-  var r = initRandom(len)
   initFromBin(x, u)
   fuzzMe(x)
 
-proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
+proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =
-  if len < sizeof(int32): return
+  #if len < sizeof(int32): return
   var x: seq[int32] = @[]
   var u = toUnstructured(data, len)
   initFromBin(x, u)
-  var r = initRandom(seed)
+  var r = initRand(seed)
   mutate(x, r)
   var pos = 0
   var tmp = newSeq[byte](maxLen)

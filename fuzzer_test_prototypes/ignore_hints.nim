@@ -1,16 +1,11 @@
-# Test the Post-script idea in
-# https://fitzgeraldnick.com/2019/09/04/combining-coverage-guided-and-generation-based-fuzzing.html
 import std/[random, math, fenv, sequtils]
-
-# Notes: Better than nothing (the original). But the user provided mutation strategy def doesn't work.
-# Sometimes the crash is not reproducible. Also only growing or shrinking makes no sense. Ofc you'd want
-# to always minimize but doesn't that destroy 'useful' input provided by the fuzzer?
 
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
+# Experiment with custom mutator + reading zero bytes when the buffer is exhausted.
+
 type
   GrowOrShrink = enum
-    Either,
     Grow, # Make `x` bigger.
     Shrink, # Make `x` smaller.
 
@@ -23,51 +18,28 @@ proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
 proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
   {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
 
-#proc mutate[T](x: var T, r: var Rand,
-    #growOrShrink: GrowOrShrink): bool
-  ## Mutate `self` with a random mutation to be either bigger
-  ## or smaller. Return `true` if successfully mutated, `false`
-  ## if `self` can't get any bigger/smaller.
-
-# Example implementation for `int64`.
-#proc mutate(x: var int32, r: var Rand,
-    #growOrShrink: GrowOrShrink): bool =
-  #case growOrShrink
-  #of GrowOrShrink.Grow:
-    #if x == high(int32): return false
-    #x = r.rand(x + 1..high(int32))
-    #true
-  #of GrowOrShrink.Shrink:
-    #if x == 0: return false
-    #x = r.rand(0'i32..x - 1)
-    #true
-
 proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
     importc: "LLVMFuzzerMutate".}
 
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
-proc mutate[T](v: T; r: var Rand; growOrShrink: GrowOrShrink) =
+proc mutate[T](v: T; r: var Rand) =
   let size = mutate(cast[ptr UncheckedArray[byte]](addr v), sizeof(T), sizeof(T))
   zeroMem(v.addr +! size, sizeof(T) - size)
 
-proc mutate[T](x: var seq[T], r: var Rand,
-    growOrShrink: GrowOrShrink) {.noCov.} =
-  var tmp = growOrShrink
-  if growOrShrink == Either:
-    tmp = r.rand(Grow..Shrink)
-  case tmp
+proc mutate[T](x: var seq[T], r: var Rand) =
+  case r.rand(GrowOrShrink)
   of GrowOrShrink.Grow:
     if x.len >= 10: return
     x.grow(r.rand(x.len + 1..10), default(T))
     for y in mitems(x):
-      mutate(y, r, growOrShrink)
+      mutate(y, r)
   of GrowOrShrink.Shrink:
     if x.len == 0: return
     x.shrink(r.rand(0..x.len - 1))
     for y in mitems(x):
-      mutate(y, r, growOrShrink)
+      mutate(y, r)
   else: discard
 
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =
@@ -107,6 +79,22 @@ proc initFromBin[T](dst: var seq[T]; x: var Unstructured) {.noCov.} =
     let bLen = len * sizeof(T)
     readData(x, dst[0].addr, bLen)
 
+proc writeData(x: var seq[byte], pos: var int, buffer: pointer, bufLen: int) =
+  if bufLen <= 0:
+    return
+  if pos + bufLen > x.len:
+    setLen(x, pos + bufLen)
+  copyMem(addr(x[pos]), buffer, bufLen)
+  inc(pos, bufLen)
+
+proc write[T](x: var seq[byte], pos: var int, v: T) =
+  writeData(x, pos, addr v, sizeof(v))
+
+proc write(x: var seq[byte], pos: var int; v: seq[int32]) =
+  write(x, pos, int32(v.len))
+  if v.len > 0:
+    writeData(x, pos, addr v[0], v.len * sizeof(int32))
+
 proc fuzzMe(s: seq[int32]) =
   if s == @[0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32]:
     echo "PANIC!"; quitOrDebug()
@@ -121,5 +109,21 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
   var u = toUnstructured(data, len)
   var r = initRandom(len)
   initFromBin(x, u)
-  mutate(x, r, Either)
   fuzzMe(x)
+
+proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
+    exportc: "LLVMFuzzerCustomMutator".} =
+  if len < sizeof(int32): return
+  var x: seq[int32] = @[]
+  var u = toUnstructured(data, len)
+  initFromBin(x, u)
+  var r = initRandom(seed)
+  mutate(x, r)
+  var pos = 0
+  var tmp = newSeq[byte](maxLen)
+  write(tmp, pos, x)
+  result = tmp.len
+  if result <= maxLen:
+    copyMem(data, addr tmp[0], result)
+  else:
+    result = len

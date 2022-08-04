@@ -2,10 +2,14 @@
 # https://fitzgeraldnick.com/2019/09/04/combining-coverage-guided-and-generation-based-fuzzing.html
 import std/[random, math, fenv, sequtils]
 
+# Notes: Better than nothing (the original). But the user provided mutation strategy def doesn't work.
+# Sometimes the crash is not reproducible.
+
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
 type
   GrowOrShrink = enum
+    Either,
     Grow, # Make `x` bigger.
     Shrink, # Make `x` smaller.
 
@@ -43,25 +47,27 @@ proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
-proc mutate[T](v: T; r: var Rand; growOrShrink: GrowOrShrink): bool =
+proc mutate[T](v: T; r: var Rand; growOrShrink: GrowOrShrink) =
   let size = mutate(cast[ptr UncheckedArray[byte]](addr v), sizeof(T), sizeof(T))
   zeroMem(v.addr +! size, sizeof(T) - size)
 
 proc mutate[T](x: var seq[T], r: var Rand,
-    growOrShrink: GrowOrShrink): bool {.noCov.} =
+    growOrShrink: GrowOrShrink) {.noCov.} =
+  let tmp = growOrShrink
+  if growOrShrink == Either:
+    let growOrShrink = r.rand(Grow..Shrink)
   case growOrShrink
   of GrowOrShrink.Grow:
-    if x.len >= 10: return false
+    if x.len >= 10: return
     x.grow(r.rand(x.len + 1..10), default(T))
-    result = true
     for y in mitems(x):
-      result = result and mutate(y, r, Grow)
+      mutate(y, r, tmp)
   of GrowOrShrink.Shrink:
-    if x.len == 0: return false
+    if x.len == 0: return
     x.shrink(r.rand(0..x.len - 1))
-    result = true
     for y in mitems(x):
-      result = result and mutate(y, r, Shrink)
+      mutate(y, r, tmp)
+  else: discard
 
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =
   Unstructured(data: data, pos: 0, len: len)
@@ -114,5 +120,5 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
   var u = toUnstructured(data, len)
   var r = initRandom(len)
   initFromBin(x, u)
-  discard mutate(x, r, Grow)
+  mutate(x, r, Either)
   fuzzMe(x)

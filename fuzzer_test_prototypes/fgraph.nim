@@ -69,16 +69,12 @@ when isMainModule:
     let u = r.rand(float(cdf[^1]))
     E(cdf.upperBound(U(u)) + low(E).ord)
 
-  func mutate[T](
-    input: var Graph[T],
-    mutator: GraphMutator,
-    spareCplx: float,
-    r: var Rand
-  ): bool =
+  func mutate[T](input: var Graph[T], mutator: GraphMutator, spareCplx: float, r: var Rand
+      ): bool =
     result = false
     case mutator
     of AddNode:
-      let data = newInput[T](spareCplx)
+      let data = newInput[T](spareCplx, r)
       input.addNode(data)
       result = true
     of DeleteNode:
@@ -125,7 +121,7 @@ when isMainModule:
       let len = input.nodes.len
       if len > 0:
         let pick = r.rand(0..<len)
-        let data = newInput[T](spareCplx)
+        let data = newInput[T](spareCplx, r)
         input.addNode(data)
         input.addEdge(pick, input.nodes.high)
         result = true
@@ -136,6 +132,30 @@ when isMainModule:
         let pick2 = r.rand(0..<len)
         input.nodes.swap(pick1, pick2)
         result = true
+
+  func mutate(input: var Graph[T], spareCplx: float, r: var Rand): bool =
+    result = false
+    for _ in AddNode..MoveNode:
+      if input.mutate(r.sample(GraphMutator, Weights), input, spareCplx, r):
+        return true
+
+  func complexity[T](input: Graph[T]): float =
+    result = 0
+    for n in input.nodes.items:
+      result += 1 + float(n.edges.len)
+
+  func newInput[T](maxCplx: float, r: var Rand): Graph[T] =
+    result = Graph[T]()
+    let targetCplx = r.rand(maxCplx)
+    var currentCplx = complexity(result)
+    while currentCplx < targetCplx:
+      let mutator = if r.rand(1.0) > 0.5: AddNode else: AddEdge
+      result.mutate(mutator, targetCplx - currentCplx, r)
+      currentCplx = complexity(result)
+    while currentCplx > targetCplx:
+      let mutator = if r.rand(1.0) > 0.5: RemoveNode else: RemoveEdge
+      result.mutate(mutator, targetCplx - currentCplx, r)
+      currentCplx = complexity(result)
 
   fuzzTarget(graph, Graph[int8]):
     when defined(dumpFuzzInput): echo x

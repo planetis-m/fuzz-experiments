@@ -43,10 +43,10 @@ when isMainModule:
   type
     GraphMutator = enum
       AddNode,
-      RemoveNode,
+      DeleteNode,
       MutateNodeData,
       AddEdge,
-      RemoveEdge,
+      DeleteEdge,
       MoveEdge,
       AddFriend,
       MoveNode,
@@ -54,20 +54,88 @@ when isMainModule:
   const
     Weights = cumsummed([
       AddNode: 5,
-      RemoveNode: 5,
+      DeleteNode: 5,
       MutateNodeData: 25,
       AddEdge: 5,
-      RemoveEdge: 5,
+      DeleteEdge: 5,
       MoveEdge: 10,
       AddFriend: 10,
       MoveNode: 5
     ])
 
-  proc sample[E: OrdinalEnum; U](r: var Rand; t: typedesc[E]; cdf: openArray[U]): E =
+  func sample[E: OrdinalEnum; U](r: var Rand; t: typedesc[E]; cdf: openArray[U]): E =
     assert(cdf.len == t.enumLen)
     assert(float(cdf[^1]) > 0)
     let u = r.rand(float(cdf[^1]))
     E(cdf.upperBound(U(u)) + low(E).ord)
+
+  func mutate[T](
+    input: var Graph[T],
+    mutator: GraphMutator,
+    spareCplx: float,
+    r: var Rand
+  ): bool =
+    result = false
+    case mutator
+    of AddNode:
+      let data = newInput[T](spareCplx)
+      input.addNode(data)
+      result = true
+    of DeleteNode:
+      let len = input.nodes.len
+      if len > 0:
+        let pick = r.rand(0..<len)
+        let _ = input.deleteNode(pick)
+        result = true
+    of MutateNodeData:
+      let len = input.nodes.len
+      if len > 0:
+        let pick = r.rand(0..<len)
+        template node: untyped = input.nodes[pick]
+        result = mutate(node.data, spareCplx, r)
+    of AddEdge:
+      let len = input.nodes.len
+      if len > 0:
+        let pick1 = r.rand(0..<len)
+        let pick2 = r.rand(0..<len)
+        let _ = input.addEdge(pick1, pick2)
+        result = true
+    of DeleteEdge:
+      let len = input.nodes.len
+      if len > 0:
+        let pick = r.rand(0..<len)
+        template node: untyped = input.nodes[pick]
+        let len = node.edges.len
+        if len > 0:
+          let pick = r.rand(0..<len)
+          node.edges.delete(pick) # <- this doesn't test deleteEdge!
+          result = true
+    of MoveEdge:
+      let nodesLen = input.nodes.len
+      if nodesLen > 0:
+        let pick = r.rand(0..<nodesLen)
+        template node: untyped = input.nodes[pick]
+        let edgesLen = node.edges.len
+        if edgesLen > 0:
+          let pick1 = r.rand(0..<edgesLen)
+          let pick2 = r.rand(0..<nodesLen)
+          node.edges[pick1] = pick2
+          result = true
+    of AddFriend:
+      let len = input.nodes.len
+      if len > 0:
+        let pick = r.rand(0..<len)
+        let data = newInput[T](spareCplx)
+        input.addNode(data)
+        input.addEdge(pick, input.nodes.high)
+        result = true
+    of MoveNode:
+      let len = input.nodes.len
+      if len > 1:
+        let pick1 = r.rand(0..<len)
+        let pick2 = r.rand(0..<len)
+        input.nodes.swap(pick1, pick2)
+        result = true
 
   fuzzTarget(graph, Graph[int8]):
     when defined(dumpFuzzInput): echo x

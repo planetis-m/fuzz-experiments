@@ -103,12 +103,12 @@ when isMainModule:
     of DeleteEdge:
       let len = input.nodes.len
       if len > 0:
-        let pick = r.rand(0..<len)
+        let pick1 = r.rand(0..<len)
         template node: untyped = input.nodes[pick]
         let len = node.edges.len
         if len > 0:
-          let pick = r.rand(0..<len)
-          node.edges.delete(pick) # <- this doesn't test deleteEdge!
+          let pick2Idx = r.rand(0..<len)
+          let _ = input.deleteEdge(pick1, node.edges[pick2Idx])
           result = true
     of MoveEdge:
       let nodesLen = input.nodes.len

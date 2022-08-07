@@ -1,33 +1,36 @@
 Tasks breakdown DRAFT
 ---------------------
 
-- [ ] Fill up missing details in the spec such as distinct types, sets, refs. (2h)
 - [X] Figure out `set[enum]`. Must work with holey enums. (1.5h) (23/7)
-- [ ] Safe enum mutator, needs a macro. (1h)
-- [ ] Write more fuzz targets (2/?) (1h+)
-- [ ] Implement mutator for simple objects (generic) ()
-- [ ] Write a macro for supporting variant objects
-- [ ] Create a rough prototype that uses the generic mutator.
 - [X] Port fixUtf8 to safe Nim, run tests. (1.25h) 18/7
 - [X] Replace rand with a sampler, find how, make changes to the spec, write pseudocode. Failed, nested recursion can lead to SO. (3.5h) 25-26/7
 - [X] Port LPM sampler, run tests. (1.0h) 27/7
 - [X] Write a prototype SrcSampler that uses Any from std/typeinfo. Failed, leaks when switching branches. (1.0h) 27/7
 - [X] Adjust algorithm due to recent failure, plan accordingly. (1h) 27/7
-- [ ] Scetch a serialization format that maps perfectly to Nim types. Canceled
-- [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
 - [X] Figure out how to generalize zah's prototype. Works with custom datatypes/refs/etc (3h) 28-29/7
 - [X] Add more types tables/option/etc (1h) (31/7)
+- [X] Experiment with a random merge that doesn't go above sizeIncreaseHint. (2h) 31/7
+- [X] r.rand(bool) is missing, so make a PR and work on adding more merge overloads and testing (1h) 31/7
+- [X] Find out how to disable coverage for the fuzzers functions.
+- [X] Read libFuzzer mutator's source file.
+- [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8
+- [X] Experiment with the idea of filling up with zeros and ignore len/maxLen. (1h) 4/8
+
+- [ ] Fill up missing details in the spec such as distinct types, sets, refs. (2h)
+- [ ] Safe enum mutator, needs a macro. (1h)
+- [ ] Write more fuzz targets (2/?) (1h+)
+- [ ] Implement mutator for simple objects (generic) ()
+- [ ] Write a macro for supporting variant objects
+- [ ] Create a rough prototype that uses the generic mutator.
+- [ ] Scetch a serialization format that maps perfectly to Nim types. Canceled
+- [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
 - [ ] Make it work with object variants.
 - [ ] Try to adjust reservoir sampler to return k items.
 - [ ] Begin writing new spec/code. (2h+) 30/7
-- [X] Experiment with a random merge that doesn't go above sizeIncreaseHint. (2h) 31/7
-- [X] r.rand(bool) is missing, so make a PR and work on adding more merge overloads and testing (1h) 31/7
 - [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate
 - [ ] Finish the serialization from buffer to types.
 - [ ] Write mutate overloads for most types + merge.
 - [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. 1/8-
-- [X] Find out how to disable coverage for the fuzzers functions.
-- [X] Read libFuzzer mutator's source file.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
-- [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8
-- [X] Experiment with the idea of filling up with zeros and ignore len/maxLen. (1h) 4/8
+- [ ] Seems like usage of sizeIncreaseHint is wrong in the seq prototype need to investigate further.
+- [ ] Start porting the graph example as that would give us more intuition in structure fuzzing than the current basic ones. (2h+) 7/8

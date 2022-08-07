@@ -86,20 +86,8 @@ proc read[T](x: var Unstructured, result: var T) =
 proc readInt32(x: var Unstructured): int32 =
   read(x, result)
 
-proc intInRange[T: SomeInteger](u: var Unstructured; x: Slice[T]): T =
-  assert(x.a <= x.b, "intInRange requires a non-empty range")
-  if x.a == x.b:
-    return x.a
-  let L = x.b.BiggestUInt - x.a.BiggestUInt
-  read(u, result)
-  var res = result.BiggestUInt
-  # Avoid division by 0, in case |L + 1| results in overflow.
-  if L != high(BiggestUInt):
-    res = res mod (L + 1)
-  result = cast[T](x.a.BiggestUInt + res)
-
 proc initFromBin[T](dst: var seq[T]; x: var Unstructured) {.noCov.} =
-  let len = readInt32(x) #x.intInRange(0'i32..10'i32) gives better results
+  let len = readInt32(x)
   dst.setLen(len)
   if len > 0:
     let bLen = len * sizeof(T)
@@ -128,16 +116,16 @@ proc fuzzMe(s: seq[int32]) =
 proc printStats() {.noCov.} =
   inc step
   if step mod 100_000 == 0:
-    echo "Valid inputs (%) ", formatFloat(valid/total*100)
+    echo "Valid inputs (%) ", formatFloat(valid/total*100, precision=4)
 
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
+  printStats()
   if len < sizeof(int32): return
   var x: seq[int32] = @[]
   var u = toUnstructured(data, len)
   initFromBin(x, u)
-  printStats()
   fuzzMe(x)
 
 proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.

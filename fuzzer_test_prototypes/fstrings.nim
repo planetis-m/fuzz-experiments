@@ -100,15 +100,15 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
   if len < sizeof(int32): return
   var x: string
   var u = toUnstructured(data, len)
-  discard fromBin(x, u)
-  when defined(dumpFuzzInput): echo x
-  fuzzMe(x)
+  if fromBin(x, u):
+    when defined(dumpFuzzInput): echo x
+    fuzzMe(x)
 
 proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =
   var x: string
   var u = toUnstructured(data, len)
-  discard fromBin(x, u)
+  if not fromBin(x, u): return len
   var r = initRand(seed)
   mutate(x, maxLen - x.byteSize, r)
   var pos = 0

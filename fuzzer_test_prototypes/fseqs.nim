@@ -1,11 +1,17 @@
 import random
 
+# Experiment with calling LibFuzzer's mutate method on variable-sized data (bigger than bytes).
+# Notes: Seems to work fine, might be a decent solution to the whole mutators mess.
+# But it doesn't compose, how to overload for range types/enums/distincts/pointers?
+# It would require a when condition with both methods, for no clear benefit.
+# Rejected.
+
 {.pragma: noCoverage, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
 proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
 
-proc fuzzMe(s: string) =
-  if s == "The one place that hasn't been corrupted by Capitalism.":
+proc fuzzMe(s: seq[int32]) =
+  if s == @[0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32]:
     echo "PANIC!"; quitOrDebug()
 
 type
@@ -65,11 +71,11 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
   if len < sizeof(int32): return
-  var copy: seq[int32]
-  var readStr = toUnstructured(data, len)
-  initFromBin(copy, readStr)
-  #echo copy
-  fuzzMe(copy)
+  var x: seq[int32]
+  var u = toUnstructured(data, len)
+  initFromBin(x, u)
+  when defined(dumpFuzzInput): echo x
+  fuzzMe(x)
 
 proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
   {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
@@ -80,39 +86,67 @@ proc mutate*(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
-proc mutate[T](v: T; r: var Rand): T =
-  result = v
-  let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
-  zeroMem(result.addr +! size, sizeof(T) - size)
+#proc mutate[T](v: T; r: var Rand): T =
+  #result = v
+  #let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
+  #zeroMem(result.addr +! size, sizeof(T) - size)
 
-proc mutate(value: sink seq[int32]; sizeIncreaseHint: int; r: var Rand): seq[int32] =
-  result = value
-  while result.len > 0 and r.rand(bool):
-    result.delete(rand(r, high(result)))
-  while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
-    let index = rand(r, len(result))
-    result.insert(mutate(default(int32), r), index)
-  if result != value:
-    return result
-  if result.len == 0:
-    result.add(mutate(default(int32), r))
-    return result
-  else:
-    let index = rand(r, high(result))
-    result[index] = mutate(result[index], r)
+#proc mutate(value: var seq[int32]; sizeIncreaseHint: int; r: var Rand): seq[int32] =
+  #result = value
+  #while result.len > 0 and r.rand(bool):
+    #result.delete(rand(r, high(result)))
+  #while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
+    #let index = rand(r, len(result))
+    #result.insert(mutate(default(int32), r), index)
+  #if result != value:
+    #return result
+  #if result.len == 0:
+    #result.add(mutate(default(int32), r))
+    #return result
+  #else:
+    #let index = rand(r, high(result))
+    #result[index] = mutate(result[index], r)
+
+const
+  RandomToDefaultRatio = 100
+
+proc mutate[T](v: var T; r: var Rand) =
+  let size = mutate(cast[ptr UncheckedArray[byte]](addr v), sizeof(T), sizeof(T))
+  zeroMem(v.addr +! size, sizeof(T) - size)
+
+proc mutateValue(v: var seq[int32]; sizeIncreaseHint: int; r: var Rand) =
+  if r.rand(0..20) == 0:
+    v = @[]
+    return
+  let oldSize = v.len * sizeof(int32)
+  v.setLen(max(1, oldSize + sizeIncreaseHint div sizeof(int32)))
+  let newSize = mutate(cast[ptr UncheckedArray[byte]](addr v[0]), oldSize, v.len * sizeof(int32))
+  v.setLen(newSize div sizeof(int32))
+
+template repeatMutate(call: untyped) =
+  if rand(r, RandomToDefaultRatio - 1) == 0:
+    return
+  var tmp = v
+  for i in 1..10:
+    call
+    if v != tmp: return
+
+proc mutate(v: var seq[int32]; sizeIncreaseHint: Natural; r: var Rand) =
+  repeatMutate(mutateValue(v, sizeIncreaseHint, r))
 
 proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =
-  var copy: seq[int32]
+  var x: seq[int32]
   if len >= sizeof(int32):
-    var readStr = toUnstructured(data, len)
-    initFromBin(copy, readStr)
-  var gen = initRand(seed)
-  let value = mutate(copy, maxLen - byteSize(copy), gen)
-  result = value.byteSize
+    var u = toUnstructured(data, len)
+    initFromBin(x, u)
+  var r = initRand(seed)
+  mutate(x, maxLen - x.byteSize, r)
+  #x = mutate(x, maxLen - x.byteSize, r)
+  result = x.byteSize
   if result <= maxLen:
-    var writeStr = toUnstructured(data, maxLen)
-    writeStr.write(value)
+    var u = toUnstructured(data, maxLen)
+    u.write(x)
   else:
     result = len
 

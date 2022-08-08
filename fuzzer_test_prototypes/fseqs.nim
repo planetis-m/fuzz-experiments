@@ -4,8 +4,8 @@ import random
 
 proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
 
-proc fuzzMe(s: seq[int32]) =
-  if s == @[0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32]:
+proc fuzzMe(s: string) =
+  if s == "The one place that hasn't been corrupted by Capitalism.":
     echo "PANIC!"; quitOrDebug()
 
 type
@@ -135,7 +135,7 @@ proc customCrossOver(data1: ptr UncheckedArray[byte], len1: int,
   if len == 0: return
   var buf = newSeq[int32](len)
 
-  var gen = initRand(seed)
+  var r = initRand(seed)
   for i in 0 ..< buf.len:
     buf[i] = if r.rand(bool): copy1[i]
              else: copy2[i]

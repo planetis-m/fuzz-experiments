@@ -30,7 +30,7 @@ Tasks breakdown DRAFT
 - [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate
 - [ ] Finish the serialization from buffer to types.
 - [ ] Write mutate overloads for most types + merge.
-- [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. 1/8-
+- [ ] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. (4h+) 1/8-
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
 - [ ] Seems like usage of sizeIncreaseHint is wrong in the seq prototype need to investigate further.
 - [ ] Start porting the graph example as that would give us more intuition in structure fuzzing than the current basic ones. (3h+) 7/8

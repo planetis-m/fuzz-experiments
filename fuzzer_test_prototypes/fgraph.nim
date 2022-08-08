@@ -40,6 +40,9 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural): bool =
 when isMainModule:
   import std/[math, typetraits, algorithm, random]
 
+  const
+    MaxRepeat = 10
+
   type
     GraphMutator = enum
       AddNode,
@@ -135,11 +138,12 @@ when isMainModule:
 
   func mutate(input: var Graph[T], spareCplx: float, r: var Rand): bool =
     result = false
-    for _ in AddNode..MoveNode:
+    for _ in 1..MaxRepeat:
       if input.mutate(r.sample(GraphMutator, Weights), input, spareCplx, r):
         return true
 
   func complexity[T](input: Graph[T]): float =
+    # The space complexity is O(n + m).
     result = 0
     for n in input.nodes.items:
       result += 1 + float(n.edges.len)
@@ -149,11 +153,11 @@ when isMainModule:
     let targetCplx = r.rand(maxCplx)
     var currentCplx = complexity(result)
     while currentCplx < targetCplx:
-      let mutator = if r.rand(1.0) > 0.5: AddNode else: AddEdge
+      let mutator = if r.rand(bool): AddNode else: AddEdge
       result.mutate(mutator, targetCplx - currentCplx, r)
       currentCplx = complexity(result)
     while currentCplx > targetCplx:
-      let mutator = if r.rand(1.0) > 0.5: RemoveNode else: RemoveEdge
+      let mutator = if r.rand(bool): RemoveNode else: RemoveEdge
       result.mutate(mutator, targetCplx - currentCplx, r)
       currentCplx = complexity(result)
 

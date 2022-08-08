@@ -108,13 +108,13 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
     exportc: "LLVMFuzzerCustomMutator".} =
   var x: string
   var u = toUnstructured(data, len)
-  if not fromBin(x, u): return len
+  if not fromBin(x, u): x = ""
   var r = initRand(seed)
   mutate(x, maxLen - x.byteSize, r)
   var pos = 0
   var tmp = newSeq[byte](maxLen)
   write(tmp, pos, x)
-  result = tmp.len
+  result = pos
   if result <= maxLen:
     copyMem(data, addr tmp[0], result)
   else:

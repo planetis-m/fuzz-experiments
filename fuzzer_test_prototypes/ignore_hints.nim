@@ -4,8 +4,7 @@ import std/[random, math, fenv, sequtils, strutils]
 
 # Experiment with custom mutator + reading zero bytes when the buffer is exhausted.
 # Stress it with -max_len=16
-# Notes: Seems to work well! Writing good mutators is hard, need to find ready made ones.
-# Problem: All test cases size is same as maxlen, sizeIncreaseHint seems essential.
+# Notes: Seems to work well! But writing good mutators is hard, need to find ready made ones.
 
 type
   GrowOrShrink = enum
@@ -140,7 +139,7 @@ proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64
   var pos = 0
   var tmp = newSeq[byte](maxLen)
   write(tmp, pos, x)
-  result = tmp.len
+  result = pos
   if result <= maxLen:
     inc valid
     copyMem(data, addr tmp[0], result)

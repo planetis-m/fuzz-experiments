@@ -108,7 +108,10 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
     exportc: "LLVMFuzzerCustomMutator".} =
   var x: string
   var u = toUnstructured(data, len)
-  if not fromBin(x, u): x = ""
+  template fromBinOrDefault(x, u) =
+    if not fromBin(x, u): reset(x)
+
+  fromBinOrDefault(x, u)
   var r = initRand(seed)
   mutate(x, maxLen - x.byteSize, r)
   var pos = 0

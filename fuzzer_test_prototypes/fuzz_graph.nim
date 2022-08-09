@@ -92,7 +92,7 @@ when defined(fuzzer) and isMainModule:
     if itemCount <= 1: 0
     else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
-  proc mutateSeq[T](value: sink seq[T]; userMax = high(Natural); sizeIncreaseHint: int;
+  proc mutateSeq[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
       r: var Rand): seq[T] =
     result = value
     while result.len > 0 and r.rand(bool):
@@ -122,7 +122,7 @@ when defined(fuzzer) and isMainModule:
     repeatMutate(mutateValue(value, r))
 
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
   # User defined mutators
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =

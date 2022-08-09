@@ -87,28 +87,28 @@ template `+!`(p: pointer, s: int): untyped =
 const
   RandomToDefaultRatio = 100
 
-proc mutateValue[T](value: T; sizeIncreaseHint: int; r: var Rand): T =
+proc mutateValue[T](value: T; r: var Rand): T =
   result = value
   let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
   zeroMem(result.addr +! size, sizeof(T) - size)
 
-proc mutateValue[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T] =
+proc mutateSeq[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T] =
   result = value
   while result.len > 0 and r.rand(bool):
     result.delete(rand(r, high(result)))
   while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, len(result))
-    result.insert(mutateValue(default(T), sizeIncreaseHint, r), index)
+    result.insert(mutate(default(T), sizeIncreaseHint, r), index)
   if result != value:
     return result
   if result.len == 0:
-    result.add(mutateValue(default(T), sizeIncreaseHint, r))
+    result.add(mutate(default(T), sizeIncreaseHint, r))
     return result
   else:
     let index = rand(r, high(result))
-    result[index] = mutateValue(result[index], sizeIncreaseHint, r)
+    result[index] = mutate(result[index], sizeIncreaseHint, r)
 
-proc mutateValue(value: sink seq[int32]; sizeIncreaseHint: int; r: var Rand): seq[int32] =
+proc mutateSeqInt32(value: sink seq[int32]; sizeIncreaseHint: int; r: var Rand): seq[int32] =
   if r.rand(0..20) == 0:
     return @[]
   result = value
@@ -125,8 +125,14 @@ template repeatMutate(call: untyped) =
     value = call
     if value != tmp: return
 
+proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
+  repeatMutate(mutateValue(value, r))
+
 proc mutate(value: var seq[int32]; sizeIncreaseHint: Natural; r: var Rand) =
-  repeatMutate(mutateValue(value, sizeIncreaseHint, r))
+  repeatMutate(mutateSeqInt32(value, sizeIncreaseHint, r))
+
+proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
+  repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
 
 proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =

@@ -36,4 +36,4 @@ Tasks breakdown DRAFT
 - [ ] Start porting the graph example as that would give us more intuition in structure fuzzing than the current basic ones. (3h+) 7/8
 - [X] Experiment with using LibFuzzer's mutate on every type of data (result should be truncated). (1h) 8/8
 - [ ] Decide what would be the serialization API, should it return false on failure or fill with zeros?
-- [ ] Test how viable is the distinct idea, instead of having to write crazy mutators. (1h) 9/8
+- [ ] Test how viable is the distinct idea, instead of having to write crazy mutators. (3h+) 9/8

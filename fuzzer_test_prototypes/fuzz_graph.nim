@@ -4,6 +4,7 @@
 # Better done as a post-processor step that does culling on nodes? Or on edges.
 # A string pragma is also possible but would require regex.
 # No need for distinct seq[Node]?
+# min limit need significant refactoring let's ignore them, there are none in LibFuzzer anyway.
 # TODO: Add a post-processor step.
 
 when defined(fuzzer):
@@ -91,28 +92,12 @@ when defined(fuzzer) and isMainModule:
     if itemCount <= 1: 0
     else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
-  proc mutateSeq[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T] =
-    result = value
-    while result.len > 0 and r.rand(bool):
-      result.delete(rand(r, high(result)))
-    while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
-      let index = rand(r, len(result))
-      result.insert(mutate(default(T), sizeIncreaseHint, r), index)
-    if result != value:
-      return result
-    if result.len == 0:
-      result.add(mutate(default(T), sizeIncreaseHint, r))
-      return result
-    else:
-      let index = rand(r, high(result))
-      result[index] = mutate(result[index], sizeIncreaseHint, r)
-
-  proc mutateSeqMax[T](value: sink seq[T]; max: Natural; sizeIncreaseHint: int;
+  proc mutateSeq[T](value: sink seq[T]; userMax = high(Natural); sizeIncreaseHint: int;
       r: var Rand): seq[T] =
     result = value
     while result.len > 0 and r.rand(bool):
       result.delete(rand(r, high(result)))
-    while result.len < max and sizeIncreaseHint > 0 and
+    while result.len < userMax and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
       let index = rand(r, len(result))
       result.insert(mutate(default(T), sizeIncreaseHint, r), index)
@@ -144,7 +129,7 @@ when defined(fuzzer) and isMainModule:
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeqMax(value, MaxNodes, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =

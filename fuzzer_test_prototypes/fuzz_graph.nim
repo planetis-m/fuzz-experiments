@@ -4,13 +4,14 @@
 # Better done as a post-processor step that does culling on nodes? Or on edges.
 # A string pragma is also possible but would require regex.
 # No need for distinct seq[Node]?
+# TODO: Add a post-processor step.
 
 when defined(fuzzer):
   const
-    MaxNodes = 8 # User defined, limits number of nodes.
-
+    MaxNodes = 8 # User defined, statically limits number of nodes.
   type
     NodeIdx = distinct int
+  proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:
   type
     NodeIdx = int
@@ -22,9 +23,6 @@ type
   Node[T] = object
     data: T
     edges: seq[NodeIdx]
-
-when defined(fuzzer):
-  proc `==`(a, b: NodeIdx): bool {.borrow.}
 
 proc `[]`*[T](x: Graph[T]; idx: Natural): lent T {.inline.} = x.nodes[idx].data
 proc `[]`*[T](x: var Graph[T]; idx: Natural): var T {.inline.} = x.nodes[idx].data
@@ -49,7 +47,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
     if (let toNodeIdx = fromNode.edges.find(to.NodeIdx); toNodeIdx != -1):
       template toNode: untyped = fromNode.edges[toNodeIdx]
       fromNode.edges.delete(toNodeIdx)
-      #x.deleteNode(toNode.int)
+      #x.deleteNode(toNode.int) #sneaky bug?
 
 when defined(fuzzer) and isMainModule:
   import std/random
@@ -109,18 +107,18 @@ when defined(fuzzer) and isMainModule:
       let index = rand(r, high(result))
       result[index] = mutate(result[index], sizeIncreaseHint, r)
 
-  proc mutateSeqBounded[T](value: sink seq[T]; min, max: Natural; sizeIncreaseHint: int;
+  proc mutateSeqMax[T](value: sink seq[T]; max: Natural; sizeIncreaseHint: int;
       r: var Rand): seq[T] =
     result = value
-    while result.len > min and r.rand(bool):
+    while result.len > 0 and r.rand(bool):
       result.delete(rand(r, high(result)))
-    while result.len > max and sizeIncreaseHint > 0 and
+    while result.len < max and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
       let index = rand(r, len(result))
       result.insert(mutate(default(T), sizeIncreaseHint, r), index)
     if result != value:
       return result
-    if result.len == 0: # for compatibility with fuzzermutate?
+    if result.len == 0:
       result.add(mutate(default(T), sizeIncreaseHint, r))
       return result
     else:
@@ -135,17 +133,18 @@ when defined(fuzzer) and isMainModule:
       value = call
       if value != tmp: return
 
-  proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
-
   proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateValue(value, r))
 
-  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeqBounded(value, sizeIncreaseHint, r))
-
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, 0, MaxNodes, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
+
+  # User defined mutators
+  proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
+
+  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateSeqMax(value, MaxNodes, sizeIncreaseHint, r))
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =

@@ -43,14 +43,62 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
 
 when isMainModule:
   import std/random
+  from typetraits import supportsCopyMem
+
+  proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
+    {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
+
+  proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
+      importc: "LLVMFuzzerMutate".}
+
+  template `+!`(p: pointer, s: int): untyped =
+    cast[pointer](cast[ByteAddress](p) +% s)
 
   const
     MaxNodes = 8
     RandomToDefaultRatio = 100
 
-  proc mutateEnum(index: int; itemCount: int; r: var Rand): int =
+  proc byteSize[T: SomeNumber](x: T): int = sizeof(x)
+  proc byteSize(x: NodePos): int = sizeof(x)
+
+  proc byteSize[T](x: seq[T]): int =
+    when supportsCopyMem(T):
+      result = sizeof(int32) + x.len * sizeof(T)
+    else:
+      result = sizeof(int32)
+      for elem in x.items: result.inc byteSize(elem)
+
+  proc byteSize[T: object](o: T): int =
+    when supportsCopyMem(T):
+      result = sizeof(o)
+    else:
+      result = 0
+      for v in o.fields: result.inc byteSize(v)
+
+  proc mutateValue[T](value: T; r: var Rand): T =
+    result = value
+    let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
+    zeroMem(result.addr +! size, sizeof(T) - size)
+
+  proc mutateEnum(index, itemCount: int; r: var Rand): int =
     if itemCount <= 1: 0
     else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
+
+  proc mutateSeq[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T] =
+    result = value
+    while result.len > 0 and r.rand(bool):
+      result.delete(rand(r, high(result)))
+    while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
+      let index = rand(r, len(result))
+      result.insert(mutate(default(T), sizeIncreaseHint, r), index)
+    if result != value:
+      return result
+    if result.len == 0:
+      result.add(mutate(default(T), sizeIncreaseHint, r))
+      return result
+    else:
+      let index = rand(r, high(result))
+      result[index] = mutate(result[index], sizeIncreaseHint, r)
 
   template repeatMutate(call: untyped) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
@@ -63,9 +111,16 @@ when isMainModule:
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
+  proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateValue(value, r))
+
+  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
+
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
+    var x: Graph[int]
     when defined(dumpFuzzInput): echo x
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and

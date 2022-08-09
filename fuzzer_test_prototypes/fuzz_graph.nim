@@ -3,9 +3,10 @@
 # https://wiki.mozilla.org/Security/Fuzzing/Peach tag "Relation", attribute "ref"
 # Better done as a post-processor step that does culling on nodes? Or on edges.
 # A string pragma is also possible but would require regex.
-# No need for distinct seq[Node]?
 # min limit need significant refactoring let's ignore them, there are none in LibFuzzer anyway.
 # TODO: Add a post-processor step.
+# Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
+# and try to mutate everything at once?
 
 when defined(fuzzer):
   const

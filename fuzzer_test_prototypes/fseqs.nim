@@ -2,7 +2,7 @@ import random
 
 # Experiment with calling LibFuzzer's mutate method on variable-sized data (bigger than bytes).
 # Notes: Seems to work fine, might be a decent solution to the whole mutators mess.
-# Managed to make them composable.
+# Managed to make them composable. Can the same be done with every type that supportsCopyMem?
 
 {.pragma: noCoverage, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 

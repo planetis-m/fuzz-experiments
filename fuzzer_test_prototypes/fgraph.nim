@@ -1,3 +1,7 @@
+# These mutators are crazy. I don't expect anyone using the fuzzer to come up with this.
+# Possible alternative mutator: have a distinct NodeIdx with values from 0 to MaxNodes
+# That's more inline with LPM docs and should work just fine.
+
 type
   Graph*[T] = object
     nodes: seq[Node[T]]

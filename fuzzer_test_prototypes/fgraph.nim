@@ -36,9 +36,9 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural): bool =
   if `from` < x.nodes.len and to < x.nodes.len:
     template fromNode: Node = x.nodes[`from`]
     if (let toNodeIdx = fromNode.edges.find(to); toNodeIdx != -1):
-      template toNode: Node = x.nodes[toNodeIdx]
+      template toNode: untyped = fromNode.edges[toNodeIdx]
       fromNode.edges.delete(toNodeIdx)
-      x.deleteNode(toNode)
+      x.deleteNode(toNode) # bug here!
       result = true
 
 when isMainModule:
@@ -193,3 +193,25 @@ when isMainModule:
         graph.nodes[6].edges.len == 0 and
         graph.nodes[7].edges.len == 0:
       assert false
+
+    # Needs the mutator to produce the following diff:
+    #import std/with
+
+    #var x: Graph[int]
+    #with x:
+      #addNode(data = 63)
+      #addNode(data = 3)
+      #addNode(data = -56)
+      #addNode(data = 100)
+      #addNode(data = -100)
+      #addNode(data = -78)
+      #addNode(data = 46)
+      #addNode(data = 120)
+
+      #addEdge(`from` = 0, to = 1)
+      #addEdge(`from` = 0, to = 2)
+      #addEdge(`from` = 1, to = 3)
+      #addEdge(`from` = 1, to = 4)
+      #addEdge(`from` = 2, to = 5)
+      #addEdge(`from` = 2, to = 6)
+      #addEdge(`from` = 3, to = 7)

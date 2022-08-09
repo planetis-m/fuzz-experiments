@@ -1,4 +1,14 @@
+# What about nodes seq, shouldn't it be MaxNodes = nodes.len?
+# The Peach format has the ability to specify dynamic dependencies between data.
+# https://wiki.mozilla.org/Security/Fuzzing/Peach tag "Relation", attribute "ref"
+# Better done as a post-processor step that does culling on nodes? Or on edges.
+# A string pragma is also possible but would require regex.
+# No need for distinct seq[Node]?
+
 when defined(fuzzer):
+  const
+    MaxNodes = 8 # User defined, limits number of nodes.
+
   type
     NodeIdx = distinct int
 else:
@@ -41,7 +51,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       fromNode.edges.delete(toNodeIdx)
       #x.deleteNode(toNode.int)
 
-when isMainModule:
+when defined(fuzzer) and isMainModule:
   import std/random
   from typetraits import supportsCopyMem
 
@@ -55,11 +65,10 @@ when isMainModule:
     cast[pointer](cast[ByteAddress](p) +% s)
 
   const
-    MaxNodes = 8
     RandomToDefaultRatio = 100
 
   proc byteSize[T: SomeNumber](x: T): int = sizeof(x)
-  proc byteSize(x: NodePos): int = sizeof(x)
+  proc byteSize(x: NodeIdx): int = sizeof(x)
 
   proc byteSize[T](x: seq[T]): int =
     when supportsCopyMem(T):
@@ -100,6 +109,24 @@ when isMainModule:
       let index = rand(r, high(result))
       result[index] = mutate(result[index], sizeIncreaseHint, r)
 
+  proc mutateSeqBounded[T](value: sink seq[T]; min, max: Natural; sizeIncreaseHint: int;
+      r: var Rand): seq[T] =
+    result = value
+    while result.len > min and r.rand(bool):
+      result.delete(rand(r, high(result)))
+    while result.len > max and sizeIncreaseHint > 0 and
+        result.byteSize < sizeIncreaseHint and r.rand(bool):
+      let index = rand(r, len(result))
+      result.insert(mutate(default(T), sizeIncreaseHint, r), index)
+    if result != value:
+      return result
+    if result.len == 0: # for compatibility with fuzzermutate?
+      result.add(mutate(default(T), sizeIncreaseHint, r))
+      return result
+    else:
+      let index = rand(r, high(result))
+      result[index] = mutate(result[index], sizeIncreaseHint, r)
+
   template repeatMutate(call: untyped) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
       return
@@ -114,8 +141,11 @@ when isMainModule:
   proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateValue(value, r))
 
+  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateSeqBounded(value, sizeIncreaseHint, r))
+
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, 0, MaxNodes, sizeIncreaseHint, r))
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =

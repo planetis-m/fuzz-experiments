@@ -97,10 +97,10 @@ when defined(fuzzer) and isMainModule:
       r: var Rand): seq[T] =
     result = value
     while result.len > 0 and r.rand(bool):
-      result.delete(rand(r, high(result)))
+      result.delete(rand(r, result.high))
     while result.len < userMax and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
-      let index = rand(r, len(result))
+      let index = rand(r, result.len)
       result.insert(mutate(default(T), sizeIncreaseHint, r), index)
     if result != value:
       return result
@@ -108,7 +108,7 @@ when defined(fuzzer) and isMainModule:
       result.add(mutate(default(T), sizeIncreaseHint, r))
       return result
     else:
-      let index = rand(r, high(result))
+      let index = rand(r, result.high)
       result[index] = mutate(result[index], sizeIncreaseHint, r)
 
   template repeatMutate(call: untyped) =

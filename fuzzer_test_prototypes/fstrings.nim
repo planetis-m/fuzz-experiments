@@ -1,6 +1,7 @@
-import random
+import random, strutils
 
 # Wtf is going on in this example with invalid inputs. Needs investigation.
+# It could be this: https://cs.github.com/llvm/llvm-project/blob/5bbe452e75d464d02547cef0ea2919c53b693f54/compiler-rt/lib/fuzzer/FuzzerLoop.cpp#L809
 
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
@@ -60,25 +61,25 @@ proc readData(x: var Unstructured, buffer: pointer, bufLen: int): int =
 
 proc read[T](x: var Unstructured, res: var T): bool =
   result = true
-  if readData(x, addr(res), sizeof(T)) != sizeof(T):
+  if readData(x, addr res, sizeof(T)) != sizeof(T): # all happens here
     result = false
 
 proc fromBin(dst: var string; x: var Unstructured): bool  =
   var len = 0'i32
   result = false
   if read(x, len):
-    dst.setLen(len)
     result = true
+    dst.setLen(len)
     if len > 0:
-      let bLen = len
-      if readData(x, dst[0].addr, bLen) != bLen: result = false
+      if readData(x, dst[0].addr, len) != len:
+        result = false
 
 proc writeData(x: var seq[byte], pos: var int, buffer: pointer, bufLen: int) =
   if bufLen <= 0:
     return
   if pos + bufLen > x.len:
     setLen(x, pos + bufLen)
-  copyMem(addr(x[pos]), buffer, bufLen)
+  copyMem(addr x[pos], buffer, bufLen)
   inc(pos, bufLen)
 
 proc write[T](x: var seq[byte], pos: var int, v: T) =
@@ -96,17 +97,17 @@ proc fuzzMe(s: string) =
   if s == "The one place that hasn't been corrupted by Capitalism.":
     echo "PANIC!"; quitOrDebug()
 
-import strutils
-
 var
-  invalid = 0
+  invalidI = 0
+  invalidO = 0
   total = 0
   step = 0
 
 proc printStats() {.noCov.} =
   inc step
   if step mod 100 == 0:
-    echo "Invalid inputs (%) ", formatFloat(invalid/total*100, precision=4)
+    echo "Invalid inputs  (%) ", formatFloat(invalidI/total*100, precision=4)
+    echo "Invalid outputs (%) ", formatFloat(invalidO/total*100, precision=4)
 
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
@@ -126,7 +127,9 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
   inc total
   var u = toUnstructured(data, len)
   template fromBinOrDefault(x, u) =
-    if not fromBin(x, u): inc invalid; reset(x)
+    if not fromBin(x, u):
+      echo toHex(int8 data[0]) # 0A wtf is this
+      inc invalidI; reset(x)
 
   fromBinOrDefault(x, u)
   var r = initRand(seed)
@@ -137,5 +140,7 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
   result = pos
   if result <= maxLen:
     copyMem(data, addr tmp[0], result)
+    if len == 1 and data[0] == 0x0A'u8: echo "WTFFFFFFFFFFFF"
   else:
+    inc invalidO
     result = len

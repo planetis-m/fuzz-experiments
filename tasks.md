@@ -37,3 +37,4 @@ Tasks breakdown DRAFT
 - [X] Experiment with using LibFuzzer's mutate on every type of data (result should be truncated). (1h) 8/8
 - [ ] Decide what would be the serialization API, should it return false on failure or fill with zeros?
 - [ ] Test how viable is the distinct idea, instead of having to write crazy mutators. (3h+) 9/8
+- [X] Tracked down the source (libFuzzer/FuzzerLoop) for the invalid inputs. (1h) 10/8

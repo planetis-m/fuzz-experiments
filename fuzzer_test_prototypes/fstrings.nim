@@ -1,7 +1,7 @@
 import random, strutils
 
-# Wtf is going on in this example with invalid inputs. Needs investigation.
-# It could be this: https://cs.github.com/llvm/llvm-project/blob/5bbe452e75d464d02547cef0ea2919c53b693f54/compiler-rt/lib/fuzzer/FuzzerLoop.cpp#L809
+# Tracked down why input may be 0A: https://cs.github.com/llvm/llvm-project/blob/5bbe452e75d464d02547cef0ea2919c53b693f54/compiler-rt/lib/fuzzer/FuzzerLoop.cpp#L809
+# Confirmed LPM deals with the same shit.
 
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
@@ -128,7 +128,6 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
   var u = toUnstructured(data, len)
   template fromBinOrDefault(x, u) =
     if not fromBin(x, u):
-      echo toHex(int8 data[0]) # 0A wtf is this
       inc invalidI; reset(x)
 
   fromBinOrDefault(x, u)
@@ -140,7 +139,6 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
   result = pos
   if result <= maxLen:
     copyMem(data, addr tmp[0], result)
-    if len == 1 and data[0] == 0x0A'u8: echo "WTFFFFFFFFFFFF"
   else:
     inc invalidO
     result = len

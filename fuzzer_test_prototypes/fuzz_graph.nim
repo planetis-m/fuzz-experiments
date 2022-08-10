@@ -115,14 +115,21 @@ when defined(fuzzer) and isMainModule:
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
-    exportc: "LLVMFuzzerTestOneInput", raises: [].} =
-    result = 0
-    var x: Graph[int]
-    var c: CoderState
-    fromData(x, toPayload(data, len), c)
-    if c.err: reset(x)
-    when defined(dumpFuzzInput): echo x
+  template toPayload*(data; len): untyped =
+    toOpenArray(data, 0, len-1)
+
+  template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
+    proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
+        exportc: "LLVMFuzzerTestOneInput", raises: [].} =
+      result = 0
+      var x: typ
+      var c: CoderState
+      fromData(x, toPayload(data, len), c)
+      if c.err: reset(x)
+      when defined(dumpFuzzInput): echo x
+      body
+
+  fuzzTarget(x, Graph[int]):
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and
         x.nodes[1].data == 3 and

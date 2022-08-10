@@ -84,9 +84,6 @@ proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var Coder
 proc toData*[T: SomeNumber](input: T; data: var openArray[byte]; c: var CoderState) =
   if not c.err: write(data, c, input)
 
-template toPayload*(data; len): untyped =
-  toOpenArray(data, 0, len-1)
-
 ## Example usage:
 ## Decode
 #let data: ptr UncheckedArray[byte] = nil

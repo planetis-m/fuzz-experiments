@@ -9,7 +9,7 @@ type
     pos: int
     err: bool
 
-proc readData(x: openArray[byte], c: var CoderState, buffer: pointer, bufLen: int): int =
+proc readData*(x: openArray[byte], c: var CoderState, buffer: pointer, bufLen: int): int =
   result = min(bufLen, x.len - c.pos)
   if result > 0:
     copyMem(buffer, addr x[c.pos], result)
@@ -17,22 +17,22 @@ proc readData(x: openArray[byte], c: var CoderState, buffer: pointer, bufLen: in
   else:
     result = 0
 
-proc read[T](x: var openArray[byte], c: var CoderState, res: var T) =
+proc read*[T](x: var openArray[byte], c: var CoderState, res: var T) =
   if readData(x, c, addr res, sizeof(res)) != sizeof(res): c.err = true
 
-proc readInt32(x: var openArray[byte], c: var CoderState): int32 =
-  read(x, result)
+proc readInt32*(x: var openArray[byte], c: var CoderState): int32 =
+  read(x, c, result)
 
-proc writeData(x: var openArray[byte], c: var CoderState, buffer: pointer, bufLen: int) =
+proc writeData*(x: var openArray[byte], c: var CoderState, buffer: pointer, bufLen: int) =
   if bufLen <= 0:
     return
   if c.pos + bufLen > x.len:
     c.err = true
   else:
-    copyMem(addr x[pos], buffer, bufLen)
+    copyMem(addr x[c.pos], buffer, bufLen)
     inc(c.pos, bufLen)
 
-proc write[T](x: var openArray[byte], c: var CoderState, v: T) =
+proc write*[T](x: var openArray[byte], c: var CoderState, v: T) =
   writeData(x, c, addr v, sizeof(v))
 
 proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) =
@@ -50,13 +50,13 @@ proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) 
     let len = readInt32(data, c)
     if not c.err:
       output.setLen(len)
-      for i in 0 ..< len:
+      for i in 0..<len:
         if c.err: break
-        fromData(output[i], s)
+        fromData(output[i], data, c)
 
 proc toData*[T](input: seq[T]; data: var openArray[byte]; c: var CoderState) =
   if not c.err:
-    write(s, int32(input.len))
+    write(data, c, int32(input.len))
     for x in input.items:
       if c.err: break
       toData(x, data, c)

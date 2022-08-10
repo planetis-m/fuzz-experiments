@@ -67,23 +67,6 @@ when defined(fuzzer) and isMainModule:
   const
     RandomToDefaultRatio = 100
 
-  proc byteSize[T: SomeNumber](x: T): int = sizeof(x)
-  proc byteSize(x: NodeIdx): int = sizeof(x)
-
-  proc byteSize[T](x: seq[T]): int =
-    when supportsCopyMem(T):
-      result = sizeof(int32) + x.len * sizeof(T)
-    else:
-      result = sizeof(int32)
-      for elem in x.items: result.inc byteSize(elem)
-
-  proc byteSize[T: object](o: T): int =
-    when supportsCopyMem(T):
-      result = sizeof(o)
-    else:
-      result = 0
-      for v in o.fields: result.inc byteSize(v)
-
   proc mutateValue[T](value: T; r: var Rand): T =
     result = value
     let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))

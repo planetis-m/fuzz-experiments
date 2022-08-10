@@ -9,6 +9,23 @@ type
     pos: int
     err: bool
 
+proc byteSize*[T: SomeNumber](x: T): int = sizeof(x)
+proc byteSize*(x: NodeIdx): int = sizeof(x)
+
+proc byteSize*[T](x: seq[T]): int =
+  when supportsCopyMem(T):
+    result = sizeof(int32) + x.len * sizeof(T)
+  else:
+    result = sizeof(int32)
+    for elem in x.items: result.inc byteSize(elem)
+
+proc byteSize*[T: object](o: T): int =
+  when supportsCopyMem(T):
+    result = sizeof(o)
+  else:
+    result = 0
+    for v in o.fields: result.inc byteSize(v)
+
 proc readData*(x: openArray[byte], c: var CoderState, buffer: pointer, bufLen: int): int =
   result = min(bufLen, x.len - c.pos)
   if result > 0:

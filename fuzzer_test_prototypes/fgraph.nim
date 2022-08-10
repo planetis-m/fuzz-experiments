@@ -1,6 +1,9 @@
 # These mutators are crazy. I don't expect anyone using the fuzzer to come up with this.
 # Possible alternative mutator: have a distinct NodeIdx with values from 0 to MaxNodes
 # That's more inline with LPM and should work just fine.
+# The sneaky bug in deleteedge and the lack of calls to it in mutate, confirmed my hypothesis.
+# Writing mutators this way is not going to work, you are testing the same procs you mutate the output with.
+# This is complete BS.
 
 type
   Graph*[T] = object

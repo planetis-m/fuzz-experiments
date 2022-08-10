@@ -3,7 +3,7 @@
 # That's more inline with LPM and should work just fine.
 # The sneaky bug in deleteedge and the lack of calls to it in mutate, confirmed my hypothesis.
 # Writing mutators this way is not going to work, you are testing the same procs you mutate the output with.
-# This is complete BS.
+# Source: https://github.com/loiclec/fuzzcheck-graph-input
 
 type
   Graph*[T] = object

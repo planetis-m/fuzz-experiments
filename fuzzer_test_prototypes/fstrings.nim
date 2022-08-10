@@ -1,5 +1,7 @@
 import random
 
+# Wtf is going on in this example with invalid inputs. Needs investigation.
+
 {.pragma: noCov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 
 proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
@@ -94,9 +96,22 @@ proc fuzzMe(s: string) =
   if s == "The one place that hasn't been corrupted by Capitalism.":
     echo "PANIC!"; quitOrDebug()
 
+import strutils
+
+var
+  invalid = 0
+  total = 0
+  step = 0
+
+proc printStats() {.noCov.} =
+  inc step
+  if step mod 100 == 0:
+    echo "Invalid inputs (%) ", formatFloat(invalid/total*100, precision=4)
+
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
+  printStats()
   if len < sizeof(int32): return
   var x: string
   var u = toUnstructured(data, len)
@@ -106,10 +121,12 @@ proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
 
 proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =
+  #if len < sizeof(int32): return
   var x: string
+  inc total
   var u = toUnstructured(data, len)
   template fromBinOrDefault(x, u) =
-    if not fromBin(x, u): reset(x)
+    if not fromBin(x, u): inc invalid; reset(x)
 
   fromBinOrDefault(x, u)
   var r = initRand(seed)

@@ -112,7 +112,7 @@ proc printStats() {.noCov.} =
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
-  printStats()
+  #printStats()
   if len < sizeof(int32): return
   var x: string
   var u = toUnstructured(data, len)
@@ -134,7 +134,7 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
   var r = initRand(seed)
   mutate(x, maxLen - x.byteSize, r)
   var pos = 0
-  var tmp = newSeq[byte](maxLen)
+  var tmp: seq[byte] = @[] #newSeq[byte](maxLen)
   write(tmp, pos, x)
   result = pos
   if result <= maxLen:

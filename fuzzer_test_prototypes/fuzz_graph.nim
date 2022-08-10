@@ -52,7 +52,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       #x.deleteNode(toNode.int) #sneaky bug?
 
 when defined(fuzzer) and isMainModule:
-  import std/random
+  import std/random, ".."/code/buffers
   from typetraits import supportsCopyMem
 
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -136,6 +136,9 @@ when defined(fuzzer) and isMainModule:
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
     var x: Graph[int]
+    var c: CoderState
+    fromData(x, toPayload(data, len), c)
+    if c.err: reset(x)
     when defined(dumpFuzzInput): echo x
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and

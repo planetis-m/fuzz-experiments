@@ -29,11 +29,11 @@ Tasks breakdown DRAFT
 - [ ] Write more fuzz targets (3/?) (1h+)
 - [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
 - [ ] Create a rough prototype that uses the generic mutator.
-- [ ] Implement mutator for simple objects (generic) ()
+- [ ] Implement mutator for simple objects (generic) (3h+) 11/8
 - [ ] Write a macro for supporting variant objects
 - [ ] Finish the serialization from buffer to types.
 - [ ] Write mutate overloads for most types + merge.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
 - [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate (low priority)
 - [ ] Experiment with the idea of trying to mutate everything at once.
-- [ ] Needs to check how size hints are used in LPM in sampling mutations, decided against complexity ranking (high priority) 11/8
+- [ ] Needs to check how size hints are used in LPM in sampling mutations (high priority) 11/8

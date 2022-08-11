@@ -7,6 +7,7 @@
 # TODO: Add a post-processor step.
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
+# TODO: There is a conflict between mutate for objects and sampling/picking fields.
 
 when defined(fuzzer):
   const
@@ -89,15 +90,11 @@ when defined(fuzzer) and isMainModule:
     while result.len < userMax and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
       let index = rand(r, result.len)
-      var tmp = default(T)
-      mutate(tmp, sizeIncreaseHint, r)
-      result.insert(tmp, index)
+      result.insert(default(T), index)
     if result != value:
       return result
     if result.len == 0:
-      var tmp = default(T)
-      mutate(tmp, sizeIncreaseHint, r)
-      result.add(tmp)
+      result.add(default(T))
       return result
     else:
       let index = rand(r, result.high)
@@ -118,6 +115,8 @@ when defined(fuzzer) and isMainModule:
         sample(x[i], depth+1, s, r, res)
 
   proc sample[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+    inc res
+    test(s, r, DefaultMutateWeight, res)
     for v in fields(x):
       sample(v, depth, s, r, res)
 
@@ -140,6 +139,7 @@ when defined(fuzzer) and isMainModule:
         pick(x[i], depth+1, sizeIncreaseHint, r, res)
 
   proc pick[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    pickMutate(mutate(x, sizeIncreaseHint, r))
     for v in fields(x):
       pick(v, depth, sizeIncreaseHint, r, res)
 

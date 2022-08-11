@@ -7,7 +7,6 @@
 # TODO: Add a post-processor step.
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
-# Todo: What causes nodes.len to overflow?
 
 when defined(fuzzer):
   const
@@ -69,6 +68,10 @@ when defined(fuzzer) and isMainModule:
     RandomToDefaultRatio* = 100
     DefaultMutateWeight* = 1000000
 
+  proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
+  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
+  proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand)
+
   proc mutateValue[T](value: T; r: var Rand): T =
     result = value
     let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
@@ -86,15 +89,19 @@ when defined(fuzzer) and isMainModule:
     while result.len < userMax and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
       let index = rand(r, result.len)
-      result.insert(mutate(default(T), sizeIncreaseHint, r), index)
+      var tmp = default(T)
+      mutate(tmp, sizeIncreaseHint, r)
+      result.insert(tmp, index)
     if result != value:
       return result
     if result.len == 0:
-      result.add(mutate(default(T), sizeIncreaseHint, r))
+      var tmp = default(T)
+      mutate(tmp, sizeIncreaseHint, r)
+      result.add(tmp)
       return result
     else:
       let index = rand(r, result.high)
-      result[index] = mutate(result[index], sizeIncreaseHint, r)
+      mutate(result[index], sizeIncreaseHint, r)
 
   proc sample[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
     sample(x.distinctBase, depth, s, r, res)
@@ -104,6 +111,8 @@ when defined(fuzzer) and isMainModule:
     test(s, r, DefaultMutateWeight, res)
 
   proc sample[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int) =
+    inc res
+    test(s, r, DefaultMutateWeight, res)
     if depth <= 20:
       for i in 0..<x.len:
         sample(x[i], depth+1, s, r, res)
@@ -111,10 +120,6 @@ when defined(fuzzer) and isMainModule:
   proc sample[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
     for v in fields(x):
       sample(v, depth, s, r, res)
-
-  proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
-  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
-  proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand)
 
   proc pick[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
@@ -129,6 +134,7 @@ when defined(fuzzer) and isMainModule:
     pickMutate(mutate(x, sizeIncreaseHint, r))
 
   proc pick[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    pickMutate(mutate(x, sizeIncreaseHint, r))
     if depth <= 20:
       for i in 0..<x.len:
         pick(x[i], depth+1, sizeIncreaseHint, r, res)

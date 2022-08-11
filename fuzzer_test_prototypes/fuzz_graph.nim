@@ -7,7 +7,6 @@
 # TODO: Add a post-processor step.
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
-# TODO: There is a conflict between mutate for objects and sampling/picking fields.
 
 when defined(fuzzer):
   const
@@ -114,15 +113,10 @@ when defined(fuzzer) and isMainModule:
   proc sample[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int) =
     inc res
     test(s, r, DefaultMutateWeight, res)
-    #if depth <= 20:
-      #for i in 0..<x.len:
-        #sample(x[i], depth+1, s, r, res)
 
   proc sample[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
-    inc res
-    test(s, r, DefaultMutateWeight, res)
-    #for v in fields(x):
-      #sample(v, depth, s, r, res)
+    for v in fields(x):
+      sample(v, depth, s, r, res)
 
   proc pick[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
@@ -138,14 +132,10 @@ when defined(fuzzer) and isMainModule:
 
   proc pick[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     pickMutate(mutate(x, sizeIncreaseHint, r))
-    #if depth <= 20:
-      #for i in 0..<x.len:
-        #pick(x[i], depth+1, sizeIncreaseHint, r, res)
 
   proc pick[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
-    pickMutate(mutate(x, sizeIncreaseHint, r))
-    #for v in fields(x):
-      #pick(v, depth, sizeIncreaseHint, r, res)
+    for v in fields(x):
+      pick(v, depth, sizeIncreaseHint, r, res)
 
   proc mutateObj[T: object](value: var T; sizeIncreaseHint: int;
       r: var Rand) =
@@ -153,7 +143,6 @@ when defined(fuzzer) and isMainModule:
     var s: Sampler[int]
     sample(value, 0, s, r, res)
     res = s.selected
-    echo "select: ",res
     pick(value, 0, sizeIncreaseHint, r, res)
 
   template repeatMutate(call: untyped) =

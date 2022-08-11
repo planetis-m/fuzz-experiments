@@ -191,7 +191,11 @@ when defined(fuzzer) and isMainModule:
       fromData(x, toPayload(data, len), c)
       if c.err: reset(x)
       var r = initRand(seed)
+      echo "BEFORE ==========="
+      echo x
       mutate(x, maxLen-x.byteSize, r)
+      echo "AFTER ============"
+      echo x
       reset(c)
       var buf = newSeq[byte](maxLen)
       toData(x, buf, c)

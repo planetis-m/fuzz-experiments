@@ -16,25 +16,24 @@ Tasks breakdown DRAFT
 - [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8
 - [X] Experiment with the idea of filling up with zeros and ignore len/maxLen. (1h) 4/8
 
-- [ ] Fill up missing details in the spec such as distinct types, sets, refs. (2h)
+- [X] Fill up missing details in the spec such as distinct types, sets, refs. (2h)
+- [X] Begin writing new spec/code. (2h) 30/7
+- [X] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. (overengineered) (4h) 1/8-8/8
+- [X] Seems like usage of sizeIncreaseHint is wrong in the seq prototype need to investigate further. (2h) 8/8
+- [X] Start porting the graph example as that would give us more intuition in structure fuzzing than the current basic ones. (3h+) 7/8
+- [X] Experiment with using LibFuzzer's mutate on every type of data (result should be truncated). (1h) 8/8
+- [X] Decide what would be the serialization API, should it return false on failure or fill with zeros?
+- [X] Test how viable is the distinct idea, instead of having to write crazy mutators. (5h+) 9/8-10/10
+- [X] Tracked down the source (libFuzzer/FuzzerLoop) for the invalid inputs. (1h) 10/8
 - [ ] Safe enum mutator, needs a macro. (1h)
-- [ ] Write more fuzz targets (2/?) (1h+)
+- [ ] Write more fuzz targets (3/?) (1h+)
+- [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
+- [ ] Create a rough prototype that uses the generic mutator.
 - [ ] Implement mutator for simple objects (generic) ()
 - [ ] Write a macro for supporting variant objects
-- [ ] Create a rough prototype that uses the generic mutator.
-- [ ] Scetch a serialization format that maps perfectly to Nim types. Canceled
-- [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
-- [ ] Make it work with object variants.
-- [ ] Try to adjust reservoir sampler to return k items.
-- [ ] Begin writing new spec/code. (2h+) 30/7
-- [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate
 - [ ] Finish the serialization from buffer to types.
 - [ ] Write mutate overloads for most types + merge.
-- [X] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. (overengineered) (4h) 1/8-8/8
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
-- [X] Seems like usage of sizeIncreaseHint is wrong in the seq prototype need to investigate further. (2h) 8/8
-- [ ] Start porting the graph example as that would give us more intuition in structure fuzzing than the current basic ones. (3h+) 7/8
-- [X] Experiment with using LibFuzzer's mutate on every type of data (result should be truncated). (1h) 8/8
-- [ ] Decide what would be the serialization API, should it return false on failure or fill with zeros?
-- [ ] Test how viable is the distinct idea, instead of having to write crazy mutators. (5h+) 9/8-10/10
-- [X] Tracked down the source (libFuzzer/FuzzerLoop) for the invalid inputs. (1h) 10/8
+- [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate (low priority)
+- [ ] Experiment with the idea of trying to mutate everything at once.
+- [ ] Needs to check how size hints are used in LPM in sampling mutations, decided against complexity ranking (high priority) 11/8

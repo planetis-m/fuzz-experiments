@@ -1,4 +1,4 @@
-when defined(fuzzer):
+when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
 
@@ -43,8 +43,8 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       fromNode.edges.delete(toNodeIdx)
       #x.deleteNode(toNode.int) #sneaky bug?
 
-when defined(fuzzer) and isMainModule:
-  import fuzzer
+when defined(runFuzzTests) and isMainModule:
+  import mutator
 
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)

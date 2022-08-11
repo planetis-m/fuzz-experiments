@@ -52,7 +52,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       #x.deleteNode(toNode.int) #sneaky bug?
 
 when defined(fuzzer) and isMainModule:
-  import std/random, ".."/code/buffers
+  import std/random, ".."/code/[buffers, sampler]
   from typetraits import supportsCopyMem
 
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -94,6 +94,29 @@ when defined(fuzzer) and isMainModule:
       let index = rand(r, result.high)
       result[index] = mutate(result[index], sizeIncreaseHint, r)
 
+  const
+    DefaultMutateWeight = 1000000
+
+  proc sample(x: bool, depth: int, s: var Sampler; r: var Rand; res: var int) =
+    inc res
+    test(s, r, DefaultMutateWeight, res)
+
+  template select(body: untyped) =
+    if res > 0:
+      dec res
+      if res == 0:
+        body
+
+  proc traverse(x: var bool, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    select: mutate(x, sizeIncreaseHint, r)
+
+  proc mutateObj[T: object](value: var T; sizeIncreaseHint: int;
+      r: var Rand) =
+    var res = 0
+    var s: Sampler[int]
+    sample(value, 0, s, r, res)
+    traverse(value, 0, sizeIncreaseHint, r, res)
+
   template repeatMutate(call: untyped) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
       return
@@ -108,6 +131,11 @@ when defined(fuzzer) and isMainModule:
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
+  proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
+    if rand(r, RandomToDefaultRatio - 1) == 0:
+      return
+    mutateObj(value, sizeIncreaseHint, r)
+
   # User defined mutators
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
@@ -115,7 +143,7 @@ when defined(fuzzer) and isMainModule:
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  template toPayload*(data; len): untyped =
+  template toPayload(data, len): untyped =
     toOpenArray(data, 0, len-1)
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =

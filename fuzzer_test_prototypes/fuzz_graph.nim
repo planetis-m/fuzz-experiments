@@ -7,6 +7,7 @@
 # TODO: Add a post-processor step.
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
+# Todo: What causes nodes.len to overflow?
 
 when defined(fuzzer):
   const
@@ -53,6 +54,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
 
 when defined(fuzzer) and isMainModule:
   import std/random, ".."/code/[buffers, sampler]
+  from typetraits import distinctBase
 
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
@@ -64,7 +66,8 @@ when defined(fuzzer) and isMainModule:
     cast[pointer](cast[ByteAddress](p) +% s)
 
   const
-    RandomToDefaultRatio = 100
+    RandomToDefaultRatio* = 100
+    DefaultMutateWeight* = 1000000
 
   proc mutateValue[T](value: T; r: var Rand): T =
     result = value
@@ -93,8 +96,8 @@ when defined(fuzzer) and isMainModule:
       let index = rand(r, result.high)
       result[index] = mutate(result[index], sizeIncreaseHint, r)
 
-  const
-    DefaultMutateWeight = 1000000
+  proc sample[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+    sample(x.distinctBase, depth, s, r, res)
 
   proc sample[T: SomeNumber](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
     inc res
@@ -109,30 +112,37 @@ when defined(fuzzer) and isMainModule:
     for v in fields(x):
       sample(v, depth, s, r, res)
 
-  template select(body: untyped) =
+  proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
+  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
+  proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand)
+
+  proc pick[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
+
+  template pickMutate(call: untyped) =
     if res > 0:
       dec res
       if res == 0:
-        body
+        call
 
-  proc traverse[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
-    select: mutate(x, sizeIncreaseHint, r)
+  proc pick[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    pickMutate(mutate(x, sizeIncreaseHint, r))
 
-  proc traverse[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+  proc pick[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     if depth <= 20:
       for i in 0..<x.len:
-        traverse(x[i], depth+1, sizeIncreaseHint, r, res)
+        pick(x[i], depth+1, sizeIncreaseHint, r, res)
 
-  proc traverse[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+  proc pick[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     for v in fields(x):
-      traverse(v, depth, sizeIncreaseHint, r, res)
+      pick(v, depth, sizeIncreaseHint, r, res)
 
   proc mutateObj[T: object](value: var T; sizeIncreaseHint: int;
       r: var Rand) =
     var res = 0
     var s: Sampler[int]
     sample(value, 0, s, r, res)
-    traverse(value, 0, sizeIncreaseHint, r, res)
+    pick(value, 0, sizeIncreaseHint, r, res)
 
   template repeatMutate(call: untyped) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
@@ -173,6 +183,21 @@ when defined(fuzzer) and isMainModule:
       if c.err: reset(x)
       when defined(dumpFuzzInput): echo x
       body
+
+    proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
+        exportc: "LLVMFuzzerCustomMutator".} =
+      var x: typ
+      var c: CoderState
+      fromData(x, toPayload(data, len), c)
+      if c.err: reset(x)
+      var r = initRand(seed)
+      mutate(x, maxLen-x.byteSize, r)
+      reset(c)
+      var buf = newSeq[byte](maxLen)
+      toData(x, buf, c)
+      result = c.pos
+      if not c.err: copyMem(data, addr buf[0], result)
+      else: result = len
 
   fuzzTarget(x, Graph[int]):
     if x.nodes.len == 8 and

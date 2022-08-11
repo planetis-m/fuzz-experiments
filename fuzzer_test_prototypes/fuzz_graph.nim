@@ -11,8 +11,11 @@
 when defined(fuzzer):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
+
   type
     NodeIdx = distinct int
+
+  proc `$`(a: NodeIdx): string {.borrow.}
   proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:
   type
@@ -171,6 +174,9 @@ when defined(fuzzer) and isMainModule:
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
+  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateSeq(value, 2, sizeIncreaseHint, r))
+
   template toPayload(data, len): untyped =
     toOpenArray(data, 0, len-1)
 
@@ -226,4 +232,4 @@ when defined(fuzzer) and isMainModule:
         x.nodes[5].edges.len == 0 and
         x.nodes[6].edges.len == 0 and
         x.nodes[7].edges.len == 0:
-      assert false
+      doAssert false

@@ -5,6 +5,8 @@
 #   Alternatively we could always skip the first byte.
 from typetraits import supportsCopyMem, distinctBase
 
+{.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
+
 type
   CoderState* = object
     pos*: int
@@ -55,7 +57,7 @@ proc write*[T](x: var openArray[byte], c: var CoderState, v: T) =
 proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState)
 proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState)
 
-proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) =
+proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) {.nocov.} =
   if not c.err:
     let len = readInt32(data, c)
     if not c.err:
@@ -71,13 +73,13 @@ proc toData*[T](input: seq[T]; data: var openArray[byte]; c: var CoderState) =
       if c.err: break
       toData(x, data, c)
 
-proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var CoderState) =
+proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var CoderState) {.nocov.} =
   if not c.err: read(data, c, output)
 
 proc toData*[T: SomeNumber](input: T; data: var openArray[byte]; c: var CoderState) =
   if not c.err: write(data, c, input)
 
-proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) =
+proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) {.nocov.} =
   for x in output.fields:
     if c.err: return
     fromData(x, data, c)
@@ -87,10 +89,10 @@ proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState) 
     if c.err: return
     toData(x, data, c)
 
-proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline.} =
+proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline, nocov.} =
   fromData(output.distinctBase, data, c)
 
-proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline.} =
+proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline, nocov.} =
   toData(input.distinctBase, data, c)
 
 ## Example usage:

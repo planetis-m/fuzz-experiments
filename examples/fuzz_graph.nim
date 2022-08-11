@@ -5,6 +5,7 @@ when defined(runFuzzTests):
   type
     NodeIdx = distinct int
 
+  proc `$`(x: NodeIdx): string {.borrow.}
   proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:
   type

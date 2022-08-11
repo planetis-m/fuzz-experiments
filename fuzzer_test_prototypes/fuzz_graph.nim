@@ -53,7 +53,6 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
 
 when defined(fuzzer) and isMainModule:
   import std/random, ".."/code/[buffers, sampler]
-  from typetraits import supportsCopyMem
 
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
@@ -97,9 +96,18 @@ when defined(fuzzer) and isMainModule:
   const
     DefaultMutateWeight = 1000000
 
-  proc sample(x: bool, depth: int, s: var Sampler; r: var Rand; res: var int) =
+  proc sample[T: SomeNumber](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
     inc res
     test(s, r, DefaultMutateWeight, res)
+
+  proc sample[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int) =
+    if depth <= 20:
+      for i in 0..<x.len:
+        sample(x[i], depth+1, s, r, res)
+
+  proc sample[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+    for v in fields(x):
+      sample(v, depth, s, r, res)
 
   template select(body: untyped) =
     if res > 0:
@@ -107,8 +115,17 @@ when defined(fuzzer) and isMainModule:
       if res == 0:
         body
 
-  proc traverse(x: var bool, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+  proc traverse[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     select: mutate(x, sizeIncreaseHint, r)
+
+  proc traverse[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    if depth <= 20:
+      for i in 0..<x.len:
+        traverse(x[i], depth+1, sizeIncreaseHint, r, res)
+
+  proc traverse[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+    for v in fields(x):
+      traverse(v, depth, sizeIncreaseHint, r, res)
 
   proc mutateObj[T: object](value: var T; sizeIncreaseHint: int;
       r: var Rand) =

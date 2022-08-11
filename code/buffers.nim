@@ -3,14 +3,14 @@
 # - User overloads fromData, toData
 # - Return a bool on failure as it can happen often due to LibFuzzer's default input.
 #   Alternatively we could always skip the first byte.
+from typetraits import supportsCopyMem, distinctBase
 
 type
-  CoderState = object
-    pos: int
-    err: bool
+  CoderState* = object
+    pos*: int
+    err*: bool
 
 proc byteSize*[T: SomeNumber](x: T): int = sizeof(x)
-proc byteSize*(x: NodeIdx): int = sizeof(x)
 
 proc byteSize*[T](x: seq[T]): int =
   when supportsCopyMem(T):
@@ -34,10 +34,10 @@ proc readData*(x: openArray[byte], c: var CoderState, buffer: pointer, bufLen: i
   else:
     result = 0
 
-proc read*[T](x: var openArray[byte], c: var CoderState, res: var T) =
+proc read*[T](x: openArray[byte], c: var CoderState, res: var T) =
   if readData(x, c, addr res, sizeof(res)) != sizeof(res): c.err = true
 
-proc readInt32*(x: var openArray[byte], c: var CoderState): int32 =
+proc readInt32*(x: openArray[byte], c: var CoderState): int32 =
   read(x, c, result)
 
 proc writeData*(x: var openArray[byte], c: var CoderState, buffer: pointer, bufLen: int) =
@@ -52,15 +52,8 @@ proc writeData*(x: var openArray[byte], c: var CoderState, buffer: pointer, bufL
 proc write*[T](x: var openArray[byte], c: var CoderState, v: T) =
   writeData(x, c, addr v, sizeof(v))
 
-proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) =
-  for x in output.fields:
-    if c.err: return
-    fromData(x, data, c)
-
-proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState) =
-  for x in input.fields:
-    if c.err: return
-    toData(x, data, c)
+proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState)
+proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState)
 
 proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) =
   if not c.err:
@@ -83,6 +76,22 @@ proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var Coder
 
 proc toData*[T: SomeNumber](input: T; data: var openArray[byte]; c: var CoderState) =
   if not c.err: write(data, c, input)
+
+proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) =
+  for x in output.fields:
+    if c.err: return
+    fromData(x, data, c)
+
+proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState) =
+  for x in input.fields:
+    if c.err: return
+    toData(x, data, c)
+
+proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline.} =
+  fromData(output.distinctBase, data, c)
+
+proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline.} =
+  toData(input.distinctBase, data, c)
 
 ## Example usage:
 ## Decode

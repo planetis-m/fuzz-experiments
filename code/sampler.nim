@@ -1,7 +1,7 @@
-import std/[math, random]
+import std/random
 
 type
-  Sampler[T] = object
+  Sampler*[T] = object
     selected: T
     totalWeight: int
 
@@ -17,6 +17,8 @@ proc selected*[T](s: Sampler[T]): lent T = s.selected
 proc isEmpty*[T](s: Sampler[T]): bool {.inline.} = s.totalWeight == 0
 
 when isMainModule:
+  import math
+
   const
     Runs = 1000000
     Tests = [

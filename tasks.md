@@ -24,7 +24,7 @@ Tasks breakdown DRAFT
 - [X] Decide what would be the serialization API, should it return false on failure or fill with zeros?
 - [X] Test how viable is the distinct idea, instead of having to write crazy mutators. (5h+) 9/8-10/10
 - [X] Tracked down the source (libFuzzer/FuzzerLoop) for the invalid inputs. (1h) 10/8
-- [ ] Finish porting the graph example as that would give us more intuition in structure fuzzing than the current basic ones. (3h+) 7/8-11/8
+- [X] Port the graph example. (3h) 7/8-11/8
 - [ ] Safe enum mutator, needs a macro. (1h)
 - [ ] Write more fuzz targets (3/?) (1h+)
 - [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7

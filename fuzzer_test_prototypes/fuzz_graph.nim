@@ -90,11 +90,15 @@ when defined(fuzzer) and isMainModule:
     while result.len < userMax and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
       let index = rand(r, result.len)
-      result.insert(default(T), index)
+      var tmp = default(T)
+      mutate(tmp, sizeIncreaseHint, r)
+      result.insert(tmp, index)
     if result != value:
       return result
     if result.len == 0:
-      result.add(default(T))
+      var tmp = default(T)
+      mutate(tmp, sizeIncreaseHint, r)
+      result.add(tmp)
       return result
     else:
       let index = rand(r, result.high)
@@ -110,15 +114,15 @@ when defined(fuzzer) and isMainModule:
   proc sample[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int) =
     inc res
     test(s, r, DefaultMutateWeight, res)
-    if depth <= 20:
-      for i in 0..<x.len:
-        sample(x[i], depth+1, s, r, res)
+    #if depth <= 20:
+      #for i in 0..<x.len:
+        #sample(x[i], depth+1, s, r, res)
 
   proc sample[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
     inc res
     test(s, r, DefaultMutateWeight, res)
-    for v in fields(x):
-      sample(v, depth, s, r, res)
+    #for v in fields(x):
+      #sample(v, depth, s, r, res)
 
   proc pick[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
@@ -134,14 +138,14 @@ when defined(fuzzer) and isMainModule:
 
   proc pick[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     pickMutate(mutate(x, sizeIncreaseHint, r))
-    if depth <= 20:
-      for i in 0..<x.len:
-        pick(x[i], depth+1, sizeIncreaseHint, r, res)
+    #if depth <= 20:
+      #for i in 0..<x.len:
+        #pick(x[i], depth+1, sizeIncreaseHint, r, res)
 
   proc pick[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
     pickMutate(mutate(x, sizeIncreaseHint, r))
-    for v in fields(x):
-      pick(v, depth, sizeIncreaseHint, r, res)
+    #for v in fields(x):
+      #pick(v, depth, sizeIncreaseHint, r, res)
 
   proc mutateObj[T: object](value: var T; sizeIncreaseHint: int;
       r: var Rand) =
@@ -149,6 +153,7 @@ when defined(fuzzer) and isMainModule:
     var s: Sampler[int]
     sample(value, 0, s, r, res)
     res = s.selected
+    echo "select: ",res
     pick(value, 0, sizeIncreaseHint, r, res)
 
   template repeatMutate(call: untyped) =
@@ -191,6 +196,7 @@ when defined(fuzzer) and isMainModule:
       when defined(dumpFuzzInput): echo x
       body
 
+    var buffer: array[4096, byte]
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator".} =
       var x: typ
@@ -198,16 +204,11 @@ when defined(fuzzer) and isMainModule:
       fromData(x, toPayload(data, len), c)
       if c.err: reset(x)
       var r = initRand(seed)
-      echo "BEFORE ==========="
-      echo x
       mutate(x, maxLen-x.byteSize, r)
-      echo "AFTER ============"
-      echo x
       reset(c)
-      var buf = newSeq[byte](maxLen)
-      toData(x, buf, c)
+      toData(x, buffer, c)
       result = c.pos
-      if not c.err: copyMem(data, addr buf[0], result)
+      if not c.err: copyMem(data, addr buffer, result)
       else: result = len
 
   fuzzTarget(x, Graph[int]):
@@ -222,16 +223,16 @@ when defined(fuzzer) and isMainModule:
         x.nodes[7].data == 120 and
 
         x.nodes[0].edges.len == 2 and
-        x.nodes[0].edges[0] == NodeIdx(1) and
-        x.nodes[0].edges[1] == NodeIdx(2) and
+        x.nodes[0].edges[0] == 1.NodeIdx and
+        x.nodes[0].edges[1] == 2.NodeIdx and
         x.nodes[1].edges.len == 2 and
-        x.nodes[1].edges[0] == NodeIdx(3) and
-        x.nodes[1].edges[1] == NodeIdx(4) and
+        x.nodes[1].edges[0] == 3.NodeIdx and
+        x.nodes[1].edges[1] == 4.NodeIdx and
         x.nodes[2].edges.len == 2 and
-        x.nodes[2].edges[0] == NodeIdx(5) and
-        x.nodes[2].edges[1] == NodeIdx(6) and
+        x.nodes[2].edges[0] == 5.NodeIdx and
+        x.nodes[2].edges[1] == 6.NodeIdx and
         x.nodes[3].edges.len == 1 and
-        x.nodes[3].edges[0] == NodeIdx(7) and
+        x.nodes[3].edges[0] == 7.NodeIdx and
         x.nodes[4].edges.len == 0 and
         x.nodes[5].edges.len == 0 and
         x.nodes[6].edges.len == 0 and

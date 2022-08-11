@@ -26,7 +26,7 @@ Tasks breakdown DRAFT
 - [X] Tracked down the source (libFuzzer/FuzzerLoop) for the invalid inputs. (1h) 10/8
 - [X] Port the graph example. (3h) 7/8-11/8
 - [ ] Safe enum mutator, needs a macro. (1h)
-- [ ] Write more fuzz targets (3/?) (1h+)
+- [ ] Write more fuzz targets (3/?) (2h+)
 - [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
 - [ ] Create a rough prototype that uses the generic mutator.
 - [ ] Implement mutator for simple objects (generic) (3h+) 11/8

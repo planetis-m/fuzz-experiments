@@ -148,6 +148,7 @@ when defined(fuzzer) and isMainModule:
     var res = 0
     var s: Sampler[int]
     sample(value, 0, s, r, res)
+    res = s.selected
     pick(value, 0, sizeIncreaseHint, r, res)
 
   template repeatMutate(call: untyped) =

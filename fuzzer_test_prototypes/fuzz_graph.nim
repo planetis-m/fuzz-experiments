@@ -7,15 +7,17 @@
 # TODO: Add a post-processor step.
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
+# LOL I had to split the if condition to increase coverage.
 
 when defined(fuzzer):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
+    MaxEdges = 2 # Limits number of edges
 
   type
     NodeIdx = distinct int
 
-  proc `$`(a: NodeIdx): string {.borrow.}
+  proc `$`(x: NodeIdx): string {.borrow.}
   proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:
   type
@@ -175,12 +177,18 @@ when defined(fuzzer) and isMainModule:
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, 2, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
   template toPayload(data, len): untyped =
     toOpenArray(data, 0, len-1)
 
+  {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
+
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
+    var step = 0
+    proc writeFuzzInput[T](x: T) {.nocov.} =
+      inc step
+      if step mod 100000 == 0: echo x
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
@@ -188,7 +196,8 @@ when defined(fuzzer) and isMainModule:
       var c: CoderState
       fromData(x, toPayload(data, len), c)
       if c.err: reset(x)
-      when defined(dumpFuzzInput): echo x
+      when defined(dumpFuzzInput):
+        writeFuzzInput(x)
       body
 
     var buffer: array[4096, byte]
@@ -206,7 +215,7 @@ when defined(fuzzer) and isMainModule:
       if not c.err: copyMem(data, addr buffer, result)
       else: result = len
 
-  fuzzTarget(x, Graph[int]):
+  fuzzTarget(x, Graph[int8]):
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and
         x.nodes[1].data == 3 and
@@ -215,21 +224,21 @@ when defined(fuzzer) and isMainModule:
         x.nodes[4].data == -100 and
         x.nodes[5].data == -78 and
         x.nodes[6].data == 46 and
-        x.nodes[7].data == 120 and
+        x.nodes[7].data == 120:
 
-        x.nodes[0].edges.len == 2 and
-        x.nodes[0].edges[0] == 1.NodeIdx and
-        x.nodes[0].edges[1] == 2.NodeIdx and
-        x.nodes[1].edges.len == 2 and
-        x.nodes[1].edges[0] == 3.NodeIdx and
-        x.nodes[1].edges[1] == 4.NodeIdx and
-        x.nodes[2].edges.len == 2 and
-        x.nodes[2].edges[0] == 5.NodeIdx and
-        x.nodes[2].edges[1] == 6.NodeIdx and
-        x.nodes[3].edges.len == 1 and
-        x.nodes[3].edges[0] == 7.NodeIdx and
-        x.nodes[4].edges.len == 0 and
-        x.nodes[5].edges.len == 0 and
-        x.nodes[6].edges.len == 0 and
-        x.nodes[7].edges.len == 0:
-      doAssert false
+      if x.nodes[0].edges.len == 2 and
+          x.nodes[0].edges[0] == 1.NodeIdx and
+          x.nodes[0].edges[1] == 2.NodeIdx and
+          x.nodes[1].edges.len == 2 and
+          x.nodes[1].edges[0] == 3.NodeIdx and
+          x.nodes[1].edges[1] == 4.NodeIdx and
+          x.nodes[2].edges.len == 2 and
+          x.nodes[2].edges[0] == 5.NodeIdx and
+          x.nodes[2].edges[1] == 6.NodeIdx and
+          x.nodes[3].edges.len == 1 and
+          x.nodes[3].edges[0] == 7.NodeIdx and
+          x.nodes[4].edges.len == 0 and
+          x.nodes[5].edges.len == 0 and
+          x.nodes[6].edges.len == 0 and
+          x.nodes[7].edges.len == 0:
+        doAssert false

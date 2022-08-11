@@ -1,6 +1,7 @@
 when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
+    MaxEdges = 2 # Limits number of edges
 
   type
     NodeIdx = distinct int
@@ -53,7 +54,10 @@ when defined(runFuzzTests) and isMainModule:
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  fuzzTarget(x, Graph[int]):
+  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
+
+  fuzzTarget(x, Graph[int8]):
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and
         x.nodes[1].data == 3 and

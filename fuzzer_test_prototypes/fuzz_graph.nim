@@ -8,7 +8,9 @@
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
 # Fun fact: the crash generated always has the same filename.
-# initial seed 2803948336
+# good initial seed 1600568261
+# Should the mutate calls in seq insert/add be replaced with newInput overloads?
+# TODO: Add crossover simlple merge
 
 when defined(fuzzer):
   const
@@ -193,9 +195,9 @@ when defined(fuzzer) and isMainModule:
       var x: typ
       var c: CoderState
       fromData(x, toPayload(data, len), c)
-      if c.err: reset(x)
-      when defined(dumpFuzzInput): echo(x)
-      body
+      if not c.err:
+        when defined(dumpFuzzInput): echo(x)
+        body
 
     var buffer: array[4096, byte]
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.

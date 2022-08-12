@@ -7,7 +7,7 @@
 # TODO: Add a post-processor step.
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
-# LOL I had to also split the if condition to increase coverage.
+# Fun fact: the crash generated always has the same filename.
 
 when defined(fuzzer):
   const

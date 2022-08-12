@@ -39,3 +39,4 @@ Tasks breakdown DRAFT
 - [ ] Needs to check how size hints are used in LPM in sampling mutations (high priority) 11/8
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Could port the graph example to LPM to find out how it compares.
+- [ ] Remove sanitizer coverage from the serializer.

@@ -5,10 +5,12 @@
 #   Alternatively we could always skip the first byte.
 from typetraits import supportsCopyMem, distinctBase
 
+# I'll be more certain once I see the LPM disassembly.
+# MemorySanitizer is supposed not to work with fuzzer.
 {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 {.pragma: noundef, codegenDecl: "__attribute__((no_sanitize(\"undefined\"))) $# $#$#".}
 {.pragma: noaddr, codegenDecl: "__attribute__((no_sanitize(\"address\"))) $# $#$#".}
-{.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation))))) $# $#$#".}
+{.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
 type
   CoderState* = object
@@ -60,7 +62,7 @@ proc write*[T](x: var openArray[byte], c: var CoderState, v: T) =
 proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState)
 proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState)
 
-proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) {.nocov.} =
+proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   if not c.err:
     let len = readInt32(data, c)
     if not c.err:
@@ -76,13 +78,13 @@ proc toData*[T](input: seq[T]; data: var openArray[byte]; c: var CoderState) =
       if c.err: break
       toData(x, data, c)
 
-proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var CoderState) {.nocov.} =
+proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   if not c.err: read(data, c, output)
 
 proc toData*[T: SomeNumber](input: T; data: var openArray[byte]; c: var CoderState) =
   if not c.err: write(data, c, input)
 
-proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) {.nocov.} =
+proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   for x in output.fields:
     if c.err: return
     fromData(x, data, c)
@@ -92,10 +94,10 @@ proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState) 
     if c.err: return
     toData(x, data, c)
 
-proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline, nocov.} =
+proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline, nosan.} =
   fromData(output.distinctBase, data, c)
 
-proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline, nocov.} =
+proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline, nosan.} =
   toData(input.distinctBase, data, c)
 
 ## Example usage:

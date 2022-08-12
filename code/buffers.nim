@@ -71,7 +71,7 @@ proc fromData*[T](output: var seq[T]; data: openArray[byte]; c: var CoderState) 
         if c.err: break
         fromData(output[i], data, c)
 
-proc toData*[T](input: seq[T]; data: var openArray[byte]; c: var CoderState) =
+proc toData*[T](input: seq[T]; data: var openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   if not c.err:
     write(data, c, int32(input.len))
     for x in input.items:
@@ -81,7 +81,7 @@ proc toData*[T](input: seq[T]; data: var openArray[byte]; c: var CoderState) =
 proc fromData*[T: SomeNumber](output: var T; data: openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   if not c.err: read(data, c, output)
 
-proc toData*[T: SomeNumber](input: T; data: var openArray[byte]; c: var CoderState) =
+proc toData*[T: SomeNumber](input: T; data: var openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   if not c.err: write(data, c, input)
 
 proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderState) {.nocov, nosan.} =
@@ -89,15 +89,15 @@ proc fromData*[T: object](output: var T; data: openArray[byte]; c: var CoderStat
     if c.err: return
     fromData(x, data, c)
 
-proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState) =
+proc toData*[T: object](input: T; data: var openArray[byte]; c: var CoderState) {.nocov, nosan.} =
   for x in input.fields:
     if c.err: return
     toData(x, data, c)
 
-proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline, nosan.} =
+proc fromData*[T: distinct](output: var T; data: openArray[byte]; c: var CoderState) {.inline, nocov, nosan.} =
   fromData(output.distinctBase, data, c)
 
-proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline, nosan.} =
+proc toData*[T: distinct](input: T; data: var openArray[byte]; c: var CoderState) {.inline, nocov, nosan.} =
   toData(input.distinctBase, data, c)
 
 ## Example usage:

@@ -8,6 +8,7 @@
 # Since mutate doesn't always return a new mutation, would it make more sense to remove repeatMutate
 # and try to mutate everything at once?
 # Fun fact: the crash generated always has the same filename.
+# initial seed 2803948336
 
 when defined(fuzzer):
   const
@@ -183,6 +184,7 @@ when defined(fuzzer) and isMainModule:
     toOpenArray(data, 0, len-1)
 
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
+  {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
@@ -197,7 +199,7 @@ when defined(fuzzer) and isMainModule:
 
     var buffer: array[4096, byte]
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
-        exportc: "LLVMFuzzerCustomMutator".} =
+        exportc: "LLVMFuzzerCustomMutator", nosan.} =
       var x: typ
       var c: CoderState
       fromData(x, toPayload(data, len), c)

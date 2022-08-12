@@ -40,3 +40,5 @@ Tasks breakdown DRAFT
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Could port the graph example to LPM to find out how it compares.
 - [X] Remove sanitizer coverage from the serializer, keep testing. (1h) 12/8
+- [ ] See if the original graph mutator performs any better than the 'dumb' one.
+- [ ] Use the standalone fuzzer + a corpus, run them and get some perf result.

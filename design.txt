@@ -207,9 +207,12 @@ There are some downsides:
 On the upside, it is simpler to implement, and will work with more fuzzers other than libFuzzer.
 Prototype: https://gist.github.com/planetis-m/4c79f55e3040af9fb7b509809e43f342
 
+Others have similar (negative) views: https://github.com/loiclec/fuzzcheck-rs/blob/main/articles/why_not_bytes.md
+
 Other options considered
 ========================
 
+[FuzzCheck](https://github.com/loiclec/FuzzCheck) Swift and Rust structured mutator.
 [gofuzz](https://github.com/google/gofuzz) Smart fuzzer for Go, similar to the section above.
 
 TODO

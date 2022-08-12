@@ -19,20 +19,21 @@ type
     x: T
 
 macro isOverloaded(x: typed): bool =
-  let params = getTypeInst(x)[0]
+  expectKind(x, nnkCall)
+  expectMinLen(x, 1)
+  let params = getTypeInst(x[0])[0]
+  echo getType(x[0]).treeRepr
   expectKind params, nnkFormalParams
   echo params.treeRepr
-  #expectKind(procInst, nnkProcDef)
-  #expectLen(inst[])
-  #result = newLit(getTypeInst(x))
   result = newLit(true)
 
-proc foo[T: object](x: T) = echo "true"
+#proc foo[T: object](x: T) = echo "true"
 proc foo[T](x: Foo[T]) = echo "false"
 
 #var x: Foo[int]
 #foo(x)
-echo isOverloaded(foo[int]) # well shit
+var x: Foo[int]
+echo isOverloaded(foo(x))
 # For the first proc it outputs:
 #ProcTy
   #FormalParams
@@ -57,6 +58,15 @@ echo isOverloaded(foo[int]) # well shit
           #Sym "int"
       #Empty
   #Empty
+
+#FormalParams
+  #Empty
+  #IdentDefs
+    #Sym "x"
+    #BracketExpr
+      #Sym "Foo"
+      #Sym "int"
+    #Empty
 
 # but when both are uncommented, it just returns void:
 #Sym "void"

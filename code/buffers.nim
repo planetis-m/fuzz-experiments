@@ -6,6 +6,9 @@
 from typetraits import supportsCopyMem, distinctBase
 
 {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
+{.pragma: noundef, codegenDecl: "__attribute__((no_sanitize(\"undefined\"))) $# $#$#".}
+{.pragma: noaddr, codegenDecl: "__attribute__((no_sanitize(\"address\"))) $# $#$#".}
+{.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation))))) $# $#$#".}
 
 type
   CoderState* = object

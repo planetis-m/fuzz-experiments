@@ -18,22 +18,21 @@ type
   Foo[T] = object
     x: T
 
-macro isOverloaded(x: typed): bool =
-  expectKind(x, nnkCall)
-  expectMinLen(x, 1)
-  let params = getTypeInst(x[0])[0]
-  echo getType(x[0]).treeRepr
-  expectKind params, nnkFormalParams
-  echo params.treeRepr
-  result = newLit(true)
+#macro isOverloaded(x: typed): bool =
+  #expectKind(x, nnkCall)
+  #expectMinLen(x, 1)
+  #let params = getTypeImpl(x[0])[0]
+  #echo getType(x[0]).getTypeImpl.treeRepr
+  #expectKind params, nnkFormalParams
+  #echo params.treeRepr
+  #result = newLit(true)
 
-#proc foo[T: object](x: T) = echo "true"
-proc foo[T](x: Foo[T]) = echo "false"
+proc mutate[T: object](x: var T) = echo "T: object"
+proc mutate[T](x: var Foo[T]) = echo "Foo[T]"
+#proc mutate(x: var Foo[int]) = echo "Foo[int]"
 
 #var x: Foo[int]
 #foo(x)
-var x: Foo[int]
-echo isOverloaded(foo(x))
 # For the first proc it outputs:
 #ProcTy
   #FormalParams
@@ -70,3 +69,13 @@ echo isOverloaded(foo(x))
 
 # but when both are uncommented, it just returns void:
 #Sym "void"
+
+# xigoi's suggestion https://forum.nim-lang.org/t/9364#61494
+template hasCustomMutImpl(x): bool =
+  `not`: compiles:
+    proc mutate(_: var typeof(x)) = discard
+    mutate(x)
+
+var x: Foo[int]
+echo hasCustomMutImpl(x)
+mutate(x)

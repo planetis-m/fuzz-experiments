@@ -42,3 +42,5 @@ Tasks breakdown DRAFT
 - [X] Remove sanitizer coverage from the serializer, keep testing. (1h) 12/8
 - [ ] See if the original graph mutator performs any better than the 'dumb' one.
 - [ ] Use the standalone fuzzer + corpus, run them and get some perf result.
+- [ ] Find a way to fix the composition issue caused by custom mutators and pick.
+- [ ] Write mutators for tables. Do we need experimental tables API that returns the index?

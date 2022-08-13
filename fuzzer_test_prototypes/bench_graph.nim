@@ -1,5 +1,5 @@
-# Compile with: nim c --cc:clang --mm:arc --threads:off --panics:on -d:useMalloc -t:"-fsanitize=address,undefined" -l:"-fsanitize=address,undefined" -d:danger -d:fuzzer -d:fuzz_sa -g bench_graph.nim
-
+# Compile with: nim c --cc:clang --mm:arc --threads:off --panics:on -d:useMalloc -d:danger -d:fuzzer -d:fuzz_sa -g bench_graph.nim
+# perf record -e cycles:pp --call-graph dwarf ./bench_graph
 # We are making a ton of seq copies!
 import std/[os, strformat, strutils, enumerate]
 include fuzz_graph

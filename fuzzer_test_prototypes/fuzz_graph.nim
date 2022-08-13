@@ -115,6 +115,7 @@ when defined(fuzzer) and isMainModule:
       var tmp = default(T)
       mutate(tmp, sizeIncreaseHint, r)
       result.insert(tmp, index)
+    # There is a chance we delete and then insert the same item.
     if result != value:
       return result
     if result.len == 0:

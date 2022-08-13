@@ -1,0 +1,22 @@
+syntax = "proto2";
+package graph;
+
+message Graph {
+  enum NodeIdx {
+    Node0 = 0;
+    Node1 = 1;
+    Node2 = 2;
+    Node3 = 3;
+    Node4 = 4;
+    Node5 = 5;
+    Node6 = 6;
+    Node7 = 7;
+  }
+
+  message Node {
+    required int32 data = 1;
+    repeated NodeIdx edges = 2;
+  }
+
+  repeated Node nodes = 1;
+}

@@ -1,4 +1,6 @@
 # Compile with: nim c --cc:clang --mm:arc --threads:off --panics:on -d:useMalloc -t:"-fsanitize=address,undefined" -l:"-fsanitize=address,undefined" -d:danger -d:fuzzer -d:fuzz_sa -g bench_graph.nim
+
+# Fuck how to benchmark the mutator?
 import std/[os, strformat, strutils, enumerate]
 include fuzz_graph
 
@@ -116,24 +118,19 @@ const
     "\x02\x00\x00\x00\x13\x00\x00\x00\x00\x10\x00\x00\x00\x00"
   ]
 
-proc standaloneFuzzTarget =
-  ## Standalone main procedure for fuzz targets.
-  ##
-  ## Use `-d:fuzzSa` to call `standaloneFuzzTarget` to provide reproducers
-  ## for bugs when linking against libFuzzer is undesirable.
-  #stderr.write &"StandaloneFuzzTarget: running {paramCount()} inputs\n"
-  #discard initialize()
+proc benchFuzzTarget =
   #var corpus: array[100, Input]
   #for i, k in enumerate(walkDir("graph_corpus")):
-    #stderr.write &"Running: {k.path}\n"
     #var buf = readFile(k.path)
     #corpus[i] = buf.Input
-    #stderr.write &"Done:    {k.path}: ({formatSize(buf.len)})\n"
   #for x in corpus:
     #echo "  ", x, ", "
 
-  for i in 1..1000:
-    for buf in corpus:
-      discard testOneInput(cast[ptr UncheckedArray[byte]](cstring(buf)), buf.len)
+  var buf = newString(4096)
+  for i in 1..100:
+    for x in corpus.items:
+      buf.setLen(x.len)
+      copyMem(cstring(buf), cstring(x), x.len)
+      discard customMutator(cast[ptr UncheckedArray[byte]](cstring(buf)), buf.len, 4096, 1600568261)
 
-standaloneFuzzTarget()
+benchFuzzTarget()

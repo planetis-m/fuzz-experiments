@@ -41,6 +41,7 @@ Tasks breakdown DRAFT
 - [X] Could port the graph example to LPM to find out how it compares. (0.75h) 13/8
 - [X] Remove sanitizer coverage from the serializer, keep testing. (1h) 12/8
 - [ ] See if the original graph mutator performs any better than the 'dumb' one.
-- [X] Use the standalone fuzzer + corpus, run them and get some perf result. (0.5h) 13/8
+- [X] Use the standalone fuzzer + corpus, run them and get some perf result. (0.75h) 13/8
+- [X] Find how to benchmark the mutator. (0.5h) 13/8
 - [X] Find a way to fix the composition issue caused by custom mutators and pick. (1h) 12/8
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?

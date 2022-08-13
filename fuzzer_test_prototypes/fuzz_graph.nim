@@ -66,8 +66,9 @@ when defined(fuzzer) and isMainModule:
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
 
-  proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
-      importc: "LLVMFuzzerMutate".}
+  when not defined(fuzzSa):
+    proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
+        importc: "LLVMFuzzerMutate".}
 
   template `+!`(p: pointer, s: int): untyped =
     cast[pointer](cast[ByteAddress](p) +% s)
@@ -80,10 +81,24 @@ when defined(fuzzer) and isMainModule:
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
   proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand)
 
-  proc mutateValue[T](value: T; r: var Rand): T =
+  proc flipBit(bytes: ptr UncheckedArray[byte]; len: int; r: var Rand) =
+    # Flips random bit in the buffer.
+    let bit = rand(r, len * 8 - 1)
+    bytes[bit div 8] = bytes[bit div 8] xor (1'u8 shl (bit mod 8))
+
+  proc flipBit[T](value: T; r: var Rand): T =
+    # Flips random bit in the value.
     result = value
-    let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
-    zeroMem(result.addr +! size, sizeof(T) - size)
+    flipBit(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), r)
+
+  when not defined(fuzzSa):
+    proc mutateValue[T](value: T; r: var Rand): T =
+      result = value
+      let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
+      zeroMem(result.addr +! size, sizeof(T) - size)
+  else:
+    proc mutateValue[T](value: T; r: var Rand): T =
+      flipBit(value, r)
 
   proc mutateEnum(index, itemCount: int; r: var Rand): int =
     if itemCount <= 1: 0
@@ -199,21 +214,20 @@ when defined(fuzzer) and isMainModule:
         when defined(dumpFuzzInput): echo(x)
         body
 
-    when not defined(fuzzSa):
-      var buffer: array[4096, byte]
-      proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
-          exportc: "LLVMFuzzerCustomMutator", nosan.} =
-        var x: typ
-        var c: CoderState
-        fromData(x, toPayload(data, len), c)
-        if c.err: reset(x)
-        var r = initRand(seed)
-        mutate(x, maxLen-x.byteSize, r)
-        reset(c)
-        toData(x, buffer, c)
-        result = c.pos
-        if not c.err: copyMem(data, addr buffer, result)
-        else: result = len
+    var buffer: array[4096, byte]
+    proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
+        exportc: "LLVMFuzzerCustomMutator", nosan.} =
+      var x: typ
+      var c: CoderState
+      fromData(x, toPayload(data, len), c)
+      if c.err: reset(x)
+      var r = initRand(seed)
+      mutate(x, maxLen-x.byteSize, r)
+      reset(c)
+      toData(x, buffer, c)
+      result = c.pos
+      if not c.err: copyMem(data, addr buffer, result)
+      else: result = len
 
   fuzzTarget(x, Graph[int8]):
     if x.nodes.len == 8 and

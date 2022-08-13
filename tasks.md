@@ -38,7 +38,7 @@ Tasks breakdown DRAFT
 - [ ] Experiment with the idea of trying to mutate everything at once.
 - [ ] Needs to check how size hints are used in LPM in sampling mutations (high priority) 11/8
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
-- [ ] Could port the graph example to LPM to find out how it compares.
+- [X] Could port the graph example to LPM to find out how it compares. (0.75h) 13/8
 - [X] Remove sanitizer coverage from the serializer, keep testing. (1h) 12/8
 - [ ] See if the original graph mutator performs any better than the 'dumb' one.
 - [ ] Use the standalone fuzzer + corpus, run them and get some perf result.

@@ -199,20 +199,21 @@ when defined(fuzzer) and isMainModule:
         when defined(dumpFuzzInput): echo(x)
         body
 
-    var buffer: array[4096, byte]
-    proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
-        exportc: "LLVMFuzzerCustomMutator", nosan.} =
-      var x: typ
-      var c: CoderState
-      fromData(x, toPayload(data, len), c)
-      if c.err: reset(x)
-      var r = initRand(seed)
-      mutate(x, maxLen-x.byteSize, r)
-      reset(c)
-      toData(x, buffer, c)
-      result = c.pos
-      if not c.err: copyMem(data, addr buffer, result)
-      else: result = len
+    when not defined(fuzzSa):
+      var buffer: array[4096, byte]
+      proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
+          exportc: "LLVMFuzzerCustomMutator", nosan.} =
+        var x: typ
+        var c: CoderState
+        fromData(x, toPayload(data, len), c)
+        if c.err: reset(x)
+        var r = initRand(seed)
+        mutate(x, maxLen-x.byteSize, r)
+        reset(c)
+        toData(x, buffer, c)
+        result = c.pos
+        if not c.err: copyMem(data, addr buffer, result)
+        else: result = len
 
   fuzzTarget(x, Graph[int8]):
     if x.nodes.len == 8 and

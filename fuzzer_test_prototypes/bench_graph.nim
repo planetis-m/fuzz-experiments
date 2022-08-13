@@ -1,6 +1,6 @@
 # Compile with: nim c --cc:clang --mm:arc --threads:off --panics:on -d:useMalloc -t:"-fsanitize=address,undefined" -l:"-fsanitize=address,undefined" -d:danger -d:fuzzer -d:fuzz_sa -g bench_graph.nim
 
-# Fuck how to benchmark the mutator?
+# We are making a ton of seq copies!
 import std/[os, strformat, strutils, enumerate]
 include fuzz_graph
 
@@ -127,7 +127,7 @@ proc benchFuzzTarget =
     #echo "  ", x, ", "
 
   var buf = newString(4096)
-  for i in 1..100:
+  for i in 1..1000:
     for x in corpus.items:
       buf.setLen(x.len)
       copyMem(cstring(buf), cstring(x), x.len)

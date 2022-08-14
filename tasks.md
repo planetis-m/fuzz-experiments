@@ -25,23 +25,32 @@ Tasks breakdown DRAFT
 - [X] Test how viable is the distinct idea, instead of having to write crazy mutators. (5h+) 9/8-10/10
 - [X] Tracked down the source (libFuzzer/FuzzerLoop) for the invalid inputs. (1h) 10/8
 - [X] Port the graph example. (3h) 7/8-11/8
-- [ ] Safe enum mutator, needs a macro. (1h)
-- [ ] Write more fuzz targets (3/?) (2h+)
-- [ ] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h+) 27/7
-- [ ] Create a rough prototype that uses the generic mutator.
-- [ ] Implement mutator for simple objects (generic) (3h+) 11/8
-- [ ] Write a macro for supporting variant objects
-- [ ] Finish the serialization from buffer to types.
-- [ ] Write mutate overloads for most types + merge.
-- [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover
-- [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate (low priority)
-- [ ] Experiment with the idea of trying to mutate everything at once.
-- [ ] Needs to check how size hints are used in LPM in sampling mutations (high priority) 11/8
-- [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [X] Could port the graph example to LPM to find out how it compares. (0.75h) 13/8
 - [X] Remove sanitizer coverage from the serializer, keep testing. (1h) 12/8
-- [ ] See if the original graph mutator performs any better than the 'dumb' one.
 - [X] Use the standalone fuzzer + corpus, run them and get some perf result. (0.75h) 13/8
 - [X] Find how to benchmark the mutator. (0.5h) 13/8
 - [X] Find a way to fix the composition issue caused by custom mutators and pick. (1h) 12/8
+- [X] Needs to check how size hints are used in LPM in sampling mutations (high priority) 13/8
+- [X] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h) 27/7-13/8
+- [X] Implement mutator for simple objects (generic) (3h) 11/8
+
+TODO
+====
+- [ ] Finish the serialization from buffer to types.
+- [ ] See if the original graph mutator performs any better than the 'dumb' one.
+- [ ] See if hashing the seq and comparing with an old hash improves performance.
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
+- [ ] Write a macro for supporting variant objects
+- [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
+- [ ] Investigate how easy it would be to add a single custom pragma "userMax".
+
+MAYBE
+=====
+- [ ] Experiment with the idea of trying to mutate everything at once. (might not work well)
+
+POSTPONED after first release
+=============================
+- [ ] Write more fuzz targets (3/?) (2h+)
+- [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate (low priority)
+- [ ] Write mutate overloads for most types + merge.
+- [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover

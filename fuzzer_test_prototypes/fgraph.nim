@@ -146,7 +146,7 @@ when isMainModule:
   func mutate(input: var Graph[T], spareCplx: float, r: var Rand): bool =
     result = false
     for _ in 1..MaxRepeat:
-      if input.mutate(r.sample(GraphMutator, Weights), input, spareCplx, r):
+      if input.mutate(r.sample(GraphMutator, Weights), spareCplx, r):
         return true
 
   func complexity[T](input: Graph[T]): float =

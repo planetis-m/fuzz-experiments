@@ -109,7 +109,7 @@ proc mutateSeq[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T
     result.insert(newInput(), index)
   if result != value:
     return result
-  elif mutated: echo "HOLLY SHIT!"
+  elif mutated: echo "SHEEP"
   if result.len == 0:
     result.add(newInput())
     return result

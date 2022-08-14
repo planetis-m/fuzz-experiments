@@ -40,20 +40,23 @@ DONE after 4/8
 
 TODO
 ====
-- [ ] Finish the serialization from buffer to types.
+
+- [ ] Finish the serialization from buffer to types. (see pages 105,116)
 - [ ] See if the original graph mutator performs any better than the 'dumb' one.
-- [ ] See if hashing the seq and comparing with an old hash improves performance.
+- [ ] See if hashing the seq and comparing with an old hash improves performance. (0.5h+) 14/8
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
-- [ ] Write a macro for supporting variant objects
+- [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 
 MAYBE
 =====
+
 - [ ] Experiment with the idea of trying to mutate everything at once. (might not work well)
 
 POSTPONED after first release
 =============================
+
 - [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate (low priority)
 - [ ] Write mutate overloads for most types + merge.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover

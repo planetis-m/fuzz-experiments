@@ -8,11 +8,11 @@ import random
 
 proc quitOrDebug() {.noreturn, importc: "abort", header: "<stdlib.h>", nodecl.}
 
-proc fuzzMe(s: seq[bool]) =
-  if s == @[true, false, true, true, false, true, false, true, true, false, true, true, false, true, false, true,
-            true, false, true, true, false, true, false, true, true, false, true, true, false, true, false, true,
-            true, false, true, true, false, true, false, true, true, false, true, true, false, true, false, true,
-            true, false, true, true, false, true, false, true, true, false, true, true, false, true, false, true]:
+proc fuzzMe(s: seq[int32]) =
+  if s == @[0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32,
+            0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32,
+            0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32,
+            0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x11111111'i32, 0x22222222'i32, 0xdeadbeef'i32, 0x22222222'i32, 0xdeadbeef'i32]:
     echo "PANIC!"; quitOrDebug()
 
 type
@@ -52,27 +52,27 @@ proc readint32(x: var Unstructured): int32 =
 proc write[T](x: var Unstructured, v: T) =
   writeData(x, addr v, sizeof(v))
 
-proc write(x: var Unstructured; v: seq[bool]) =
+proc write(x: var Unstructured; v: seq[int32]) =
   write(x, int32(v.len))
   if v.len > 0:
-    writeData(x, addr v[0], v.len * sizeof(bool))
+    writeData(x, addr v[0], v.len * sizeof(int32))
 
-proc initFromBin(dst: var seq[bool]; x: var Unstructured) {.noCoverage.} =
+proc initFromBin(dst: var seq[int32]; x: var Unstructured) {.noCoverage.} =
   let len = int x.readint32()
   dst.setLen(len)
   if len > 0:
-    let bLen = len * sizeof(bool)
+    let bLen = len * sizeof(int32)
     if readData(x, dst[0].addr, bLen) != bLen:
       quitOrDebug()
 
-proc byteSize(x: seq[bool]): int =
-  result = sizeof(int32) + x.len * sizeof(bool)
+proc byteSize(x: seq[int32]): int =
+  result = sizeof(int32) + x.len * sizeof(int32)
 
 proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
     exportc: "LLVMFuzzerTestOneInput", raises: [].} =
   result = 0
   if len < sizeof(int32): return
-  var x: seq[bool]
+  var x: seq[int32]
   var u = toUnstructured(data, len)
   initFromBin(x, u)
   when defined(dumpFuzzInput): echo x
@@ -95,7 +95,10 @@ proc mutateValue[T](value: T; r: var Rand): T =
   let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
   zeroMem(result.addr +! size, sizeof(T) - size)
 
+proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
 proc mutateSeq[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T] =
+  template newInput: untyped =
+    (var tmp = default(T); mutate(tmp, sizeIncreaseHint, r); tmp)
   result = value
   var mutated = false
   while result.len > 0 and r.rand(bool):
@@ -103,25 +106,25 @@ proc mutateSeq[T](value: sink seq[T]; sizeIncreaseHint: int; r: var Rand): seq[T
     result.delete(rand(r, high(result)))
   while sizeIncreaseHint > 0 and result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, len(result))
-    result.insert(mutate(default(T), sizeIncreaseHint, r), index)
+    result.insert(newInput(), index)
   if result != value:
     return result
   elif mutated: echo "HOLLY SHIT!"
   if result.len == 0:
-    result.add(mutate(default(T), sizeIncreaseHint, r))
+    result.add(newInput())
     return result
   else:
     let index = rand(r, high(result))
-    result[index] = mutate(result[index], sizeIncreaseHint, r)
+    mutate(result[index], sizeIncreaseHint, r)
 
-proc mutateSeqbool(value: sink seq[bool]; sizeIncreaseHint: int; r: var Rand): seq[bool] =
+proc mutateSeqint32(value: sink seq[int32]; sizeIncreaseHint: int; r: var Rand): seq[int32] =
   if r.rand(0..20) == 0:
     return @[]
   result = value
-  var newSize = value.len * sizeof(bool) + sizeIncreaseHint
-  result.setLen(max(1, newSize div sizeof(bool)))
-  newSize = mutate(cast[ptr UncheckedArray[byte]](addr result[0]), value.len * sizeof(bool), newSize)
-  result.setLen(newSize div sizeof(bool))
+  var newSize = value.len * sizeof(int32) + sizeIncreaseHint
+  result.setLen(max(1, newSize div sizeof(int32)))
+  newSize = mutate(cast[ptr UncheckedArray[byte]](addr result[0]), value.len * sizeof(int32), newSize)
+  result.setLen(newSize div sizeof(int32))
 
 template repeatMutate(call: untyped) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
@@ -131,24 +134,18 @@ template repeatMutate(call: untyped) =
     value = call
     if value != tmp: return
 
-proc mutateBool(value: bool): bool =
-  not value
-
-proc mutate(value: var bool; sizeIncreaseHint: Natural; r: var Rand) =
-  value = mutateBool(value)
-
 proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
   repeatMutate(mutateValue(value, r))
 
-proc mutate(value: var seq[bool]; sizeIncreaseHint: Natural; r: var Rand) =
-  repeatMutate(mutateSeqbool(value, sizeIncreaseHint, r))
+#proc mutate(value: var seq[int32]; sizeIncreaseHint: Natural; r: var Rand) =
+  #repeatMutate(mutateSeqint32(value, sizeIncreaseHint, r))
 
 proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
   repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
 
 proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomMutator".} =
-  var x: seq[bool]
+  var x: seq[int32]
   if len >= sizeof(int32):
     var u = toUnstructured(data, len)
     initFromBin(x, u)
@@ -167,19 +164,19 @@ proc customCrossOver(data1: ptr UncheckedArray[byte], len1: int,
     maxResLen: int, seed: int64): int {.
     exportc: "LLVMFuzzerCustomCrossOver".} =
 
-  var copy1: seq[bool]
+  var copy1: seq[int32]
   if len1 >= sizeof(int32):
     var readStr1 = toUnstructured(data1, len1)
     initFromBin(copy1, readStr1)
 
-  var copy2: seq[bool]
+  var copy2: seq[int32]
   if len2 >= sizeof(int32):
     var readStr2 = toUnstructured(data2, len2)
     initFromBin(copy2, readStr2)
 
-  let len = min(copy1.len, min(copy2.len, (maxResLen - sizeof(bool)) div sizeof(bool)))
+  let len = min(copy1.len, min(copy2.len, (maxResLen - sizeof(int32)) div sizeof(int32)))
   if len == 0: return
-  var buf = newSeq[bool](len)
+  var buf = newSeq[int32](len)
 
   var r = initRand(seed)
   for i in 0 ..< buf.len:

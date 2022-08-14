@@ -10,7 +10,7 @@
 # Fun fact: the crash generated always has the same filename.
 # good initial seed 1600568261
 # Should the mutate calls in seq insert/add be replaced with newInput overloads?
-# TODO: Add crossover simlple merge
+# TODO: Add crossover simple merge
 
 when defined(fuzzer):
   const

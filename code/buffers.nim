@@ -3,10 +3,13 @@
 # - User overloads fromData, toData
 # - Return a bool on failure as it can happen often due to LibFuzzer's default input.
 #   Alternatively we could always skip the first byte.
+# - Order of arguments is reversed in comparison to the read procs. (?)
+# - LPM deserializes to a string which uses SSO for 22 bytes.
+# - Should CoderState be split and everything return a bool?
 from typetraits import supportsCopyMem, distinctBase
 
-# I'll be more certain once I see the LPM disassembly.
-# MemorySanitizer is supposed not to work with fuzzer.
+# Yep LPM disassembly, shows zero coverage, which I can't get rid of.
+# Also MemorySanitizer isn't supposed to work with fuzzer.
 {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 {.pragma: noundef, codegenDecl: "__attribute__((no_sanitize(\"undefined\"))) $# $#$#".}
 {.pragma: noaddr, codegenDecl: "__attribute__((no_sanitize(\"address\"))) $# $#$#".}

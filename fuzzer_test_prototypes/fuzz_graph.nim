@@ -131,13 +131,11 @@ when defined(fuzzer) and isMainModule:
       Insert,
 
   template repeatMutate2(call: untyped) =
-    result = false
     if rand(r, RandomToDefaultRatio-1) == 0:
-      reset(value)
-      return true
+      #reset(value)
+      return
     for _ in 1..10:
-      if call:
-        return true
+      if call: return
 
   proc mutateSeq2[T](value: var seq[T]; mutator: SeqMutator; userMax: Natural; sizeIncreaseHint: int;
       r: var Rand): bool =
@@ -158,21 +156,13 @@ when defined(fuzzer) and isMainModule:
         value.insert(newInput(), index)
         result = true
         if r.rand(bool): break
-    if value.len == 0:
-      value.add(newInput)
-      return result
-    else:
-      let index = rand(r, result.high)
-      mutate(result[index], sizeIncreaseHint, r)
-
-  #proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    #repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), high(Natural), sizeIncreaseHint, r))
-
-  #proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    #repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxNodes, sizeIncreaseHint, r))
-
-  #proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    #repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxEdges, sizeIncreaseHint, r))
+    if not result:
+      result = true
+      if value.len == 0:
+        value.add(newInput)
+      else:
+        let index = rand(r, value.high)
+        mutate(value[index], sizeIncreaseHint, r)
 
   proc sample[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
     sample(x.distinctBase, depth, s, r, res)
@@ -218,7 +208,7 @@ when defined(fuzzer) and isMainModule:
 
   template repeatMutate(call: untyped) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
-      reset(value)
+      #reset(value)
       return
     var tmp = value
     for i in 1..10:
@@ -228,12 +218,12 @@ when defined(fuzzer) and isMainModule:
   proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateValue(value, r))
 
-  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
+  #proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
   proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
-      reset(value)
+      #reset(value)
       return
     mutateObj(value, sizeIncreaseHint, r)
 
@@ -241,11 +231,20 @@ when defined(fuzzer) and isMainModule:
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
+  #proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
+
+  #proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
+
+  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
+    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), high(Natural), sizeIncreaseHint, r))
+
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
+    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxNodes, sizeIncreaseHint, r))
 
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
+    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxEdges, sizeIncreaseHint, r))
 
   template toPayload(data, len): untyped =
     toOpenArray(data, 0, len-1)

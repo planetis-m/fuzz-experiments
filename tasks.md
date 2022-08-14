@@ -37,13 +37,13 @@ DONE after 4/8
 - [X] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h) 27/7-13/8
 - [X] Implement mutator for simple objects (generic) (3h) 11/8
 - [X] Write more fuzz targets (3/3) (2h)
+- [X] See if hashing the seq and comparing with an old hash improves performance (solved differently). (1.25h) 14/8
 
 TODO
 ====
 
 - [ ] Finish the serialization from buffer to types. (see pages 105,116)
 - [ ] See if the original graph mutator performs any better than the 'dumb' one.
-- [ ] See if hashing the seq and comparing with an old hash improves performance. (0.5h+) 14/8
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)

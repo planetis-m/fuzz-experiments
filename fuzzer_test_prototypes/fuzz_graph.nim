@@ -106,22 +106,20 @@ when defined(fuzzer) and isMainModule:
 
   proc mutateSeq[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
       r: var Rand): seq[T] =
+    template newInput: untyped =
+      (var tmp = default(T); mutate(tmp, sizeIncreaseHint, r); tmp)
     result = value
     while result.len > 0 and r.rand(bool):
       result.delete(rand(r, result.high))
     while result.len < userMax and sizeIncreaseHint > 0 and
         result.byteSize < sizeIncreaseHint and r.rand(bool):
       let index = rand(r, result.len)
-      var tmp = default(T)
-      mutate(tmp, sizeIncreaseHint, r)
-      result.insert(tmp, index)
+      result.insert(newInput(), index)
     # There is a chance we delete and then insert the same item.
     if result != value:
       return result
     if result.len == 0:
-      var tmp = default(T)
-      mutate(tmp, sizeIncreaseHint, r)
-      result.add(tmp)
+      result.add(newInput)
       return result
     else:
       let index = rand(r, result.high)

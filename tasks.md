@@ -16,6 +16,9 @@ Tasks breakdown DRAFT
 - [X] Experiment with 'read unstructured bytes then use RNG to mutate them' idea. (3h) 3/8
 - [X] Experiment with the idea of filling up with zeros and ignore len/maxLen. (1h) 4/8
 
+DONE after 4/8
+==============
+
 - [X] Fill up missing details in the spec such as distinct types, sets, refs. (2h)
 - [X] Begin writing new spec/code. (2h) 30/7
 - [X] Research into fuzzcheck-rs/grimoire/etc and try to find ideas worth stealing. (overengineered) (4h) 1/8-8/8
@@ -33,6 +36,7 @@ Tasks breakdown DRAFT
 - [X] Needs to check how size hints are used in LPM in sampling mutations (high priority) 13/8
 - [X] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1h) 27/7-13/8
 - [X] Implement mutator for simple objects (generic) (3h) 11/8
+- [X] Write more fuzz targets (3/3) (2h)
 
 TODO
 ====
@@ -50,7 +54,6 @@ MAYBE
 
 POSTPONED after first release
 =============================
-- [ ] Write more fuzz targets (3/?) (2h+)
 - [ ] Work on two prototypes, one with 'recombine' + mutate other with merge + combine + mutate (low priority)
 - [ ] Write mutate overloads for most types + merge.
 - [ ] Idea: use minification as a way to 'benchmark' difference between only customMutator or together with crossover

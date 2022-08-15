@@ -8,6 +8,13 @@
 # - Should CoderState be split and everything return a bool?
 # - enums must be checked with this design! (so no copymem)
 # - let's skip the first byte ffs.
+
+# final implementation:
+# - move parameter T at the end.
+# - toData: data: var openArray[byte] call byteSize before and abort on failure (or throw Defect).
+# - fromData: data: openArray[byte] skip first byte, abort on failure.
+# - both use a pos: var int parameter. no error bool.
+
 from typetraits import supportsCopyMem, distinctBase
 
 # Yep LPM disassembly, shows zero coverage, which I can't get rid of.

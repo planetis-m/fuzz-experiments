@@ -12,6 +12,7 @@
 # Should the mutate calls in seq insert/add be replaced with newInput overloads?
 # TODO: Add crossover simple merge
 # Both mutators seem to perform the same in terms of new coverage, but second one is much faster.
+# New mutator produces 2x more duplicates!
 
 when defined(fuzzer):
   const
@@ -218,9 +219,9 @@ when defined(fuzzer) and isMainModule:
 
   proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateValue(value, r))
-
+#[
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))]#
 
   proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
@@ -232,12 +233,12 @@ when defined(fuzzer) and isMainModule:
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
-  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
+  #proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
-#[
+  #proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
+
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), high(Natural), sizeIncreaseHint, r))
 
@@ -245,7 +246,7 @@ when defined(fuzzer) and isMainModule:
     repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxNodes, sizeIncreaseHint, r))
 
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxEdges, sizeIncreaseHint, r))]#
+    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxEdges, sizeIncreaseHint, r))
 
   template toPayload(data, len): untyped =
     toOpenArray(data, 0, len-1)

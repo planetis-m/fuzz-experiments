@@ -39,6 +39,7 @@ DONE after 4/8
 - [X] Write more fuzz targets (3/3) (2h)
 - [X] See if hashing the seq and comparing with an old hash improves performance (solved differently). (1.25h) 14/8
 - [X] Spent time investigating why I can't reproduce results from 2days ago. (0.75h) 14/8
+- [X] Check percentage of duplicate mutations produced by the graph mutator. (0.25) 15/8
 
 TODO
 ====
@@ -49,7 +50,6 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
-- [ ] Check percentage of duplicate mutations produced by the graph mutator.
 - [ ] Adapt last mutation cache
 
 MAYBE

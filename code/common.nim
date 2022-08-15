@@ -79,55 +79,54 @@ proc readFloat32*(data: openArray[byte], pos: var int): float32 =
 proc readFloat64*(data: openArray[byte], pos: var int): float64 =
   read(data, pos, result)
 
-#{.push nosan, nocov.}
-proc toData*(data: var openArray[byte]; pos: var int; input: bool) =
+proc toData*(data: var openArray[byte]; pos: var int; input: bool) {.nosan, nocov.} =
   write(data, pos, input)
 
-proc fromData*(data: openArray[byte]; pos: var int; output: var bool) =
+proc fromData*(data: openArray[byte]; pos: var int; output: var bool) {.nosan, nocov.} =
   read(data, pos, output)
 
-proc toData*(data: var openArray[byte]; pos: var int; input: char) =
+proc toData*(data: var openArray[byte]; pos: var int; input: char) {.nosan, nocov.} =
   write(data, pos, input)
 
-proc fromData*(data: openArray[byte]; pos: var int; output: var char) =
+proc fromData*(data: openArray[byte]; pos: var int; output: var char) {.nosan, nocov.} =
   read(data, pos, output)
 
-proc toData*[T: SomeNumber](data: var openArray[byte]; pos: var int; input: T) =
+proc toData*[T: SomeNumber](data: var openArray[byte]; pos: var int; input: T) {.nosan, nocov.} =
   write(data, pos, input)
 
-proc fromData*[T: SomeNumber](data: openArray[byte]; pos: var int; output: var T) =
+proc fromData*[T: SomeNumber](data: openArray[byte]; pos: var int; output: var T) {.nosan, nocov.} =
   read(data, pos, output)
 
-proc toData*[T: enum](data: var openArray[byte]; pos: var int; input: T) =
+proc toData*[T: enum](data: var openArray[byte]; pos: var int; input: T) {.nosan, nocov.} =
   write(data, pos, input)
 
-proc fromData*[T: enum](data: openArray[byte]; pos: var int; output: var T) =
+proc fromData*[T: enum](data: openArray[byte]; pos: var int; output: var T) {.nosan, nocov.} =
   read(data, pos, output)
 
-proc toData*[T](data: var openArray[byte]; pos: var int; input: set[T]) =
+proc toData*[T](data: var openArray[byte]; pos: var int; input: set[T]) {.nosan, nocov.} =
   write(data, pos, input)
 
-proc fromData*[T](data: openArray[byte]; pos: var int; output: var set[T]) =
+proc fromData*[T](data: openArray[byte]; pos: var int; output: var set[T]) {.nosan, nocov.} =
   read(data, pos, output)
 
-proc toData*(data: var openArray[byte]; pos: var int; input: string) =
+proc toData*(data: var openArray[byte]; pos: var int; input: string) {.nosan, nocov.} =
   write(data, pos, int32(input.len))
   writeData(data, pos, cstring(input), input.len)
 
-proc fromData*(data: openArray[byte]; pos: var int; output: var string) =
+proc fromData*(data: openArray[byte]; pos: var int; output: var string) {.nosan, nocov.} =
   let len = readInt32(data, pos).int
   output.setLen(len)
   if readData(data, pos, cstring(output), len) != len:
     raiseDecodingDefect()
 
-proc toData*[S, T](data: var openArray[byte]; pos: var int; input: array[S, T]) =
+proc toData*[S, T](data: var openArray[byte]; pos: var int; input: array[S, T]) {.nosan, nocov.} =
   when supportsCopyMem(T):
     writeData(data, pos, input.unsafeAddr, sizeof(input))
   else:
     for elem in input.items:
       toData(data, pos, elem)
 
-proc fromData*[S, T](data: openArray[byte]; pos: var int; output: var array[S, T]) =
+proc fromData*[S, T](data: openArray[byte]; pos: var int; output: var array[S, T]) {.nosan, nocov.} =
   when supportsCopyMem(T):
     if readData(data, pos, output.addr, sizeof(output)) != sizeof(output):
       raiseDecodingDefect()
@@ -135,7 +134,7 @@ proc fromData*[S, T](data: openArray[byte]; pos: var int; output: var array[S, T
     for i in low(output)..high(output):
       fromData(data, pos, output[i])
 
-proc toData*[T](data: var openArray[byte]; pos: var int; input: seq[T]) =
+proc toData*[T](data: var openArray[byte]; pos: var int; input: seq[T]) {.nosan, nocov.} =
   write(data, pos, int32(input.len))
   when supportsCopyMem(T):
     if input.len > 0:
@@ -144,7 +143,7 @@ proc toData*[T](data: var openArray[byte]; pos: var int; input: seq[T]) =
     for elem in input.items:
       toData(data, pos, elem)
 
-proc fromData*[T](data: openArray[byte]; pos: var int; output: var seq[T]) =
+proc fromData*[T](data: openArray[byte]; pos: var int; output: var seq[T]) {.nosan, nocov.} =
   let len = readInt32(data, pos).int
   output.setLen(len)
   when supportsCopyMem(T):
@@ -156,38 +155,38 @@ proc fromData*[T](data: openArray[byte]; pos: var int; output: var seq[T]) =
     for i in 0..<len:
       fromData(data, pos, output[i])
 
-proc toData*[T](data: var openArray[byte]; pos: var int; input: SomeSet[T]) =
+proc toData*[T](data: var openArray[byte]; pos: var int; input: SomeSet[T]) {.nosan, nocov.} =
   write(data, pos, int32(input.len))
   for elem in input.items:
     toData(data, pos, elem)
 
-proc fromData*[T](data: openArray[byte]; pos: var int; output: var SomeSet[T]) =
+proc fromData*[T](data: openArray[byte]; pos: var int; output: var SomeSet[T]) {.nosan, nocov.} =
   let len = readInt32(data, pos).int
   for i in 0..<len:
     var tmp: T
     fromData(data, pos, tmp)
     output.incl(tmp)
 
-proc toData*[K, V](data: var openArray[byte]; pos: var int; input: (Table[K, V]|OrderedTable[K, V])) =
+proc toData*[K, V](data: var openArray[byte]; pos: var int; input: (Table[K, V]|OrderedTable[K, V])) {.nosan, nocov.} =
   write(data, pos, int32(input.len))
   for k, v in input.pairs:
     toData(data, pos, k)
     toData(data, pos, v)
 
-proc fromData*[K, V](data: openArray[byte]; pos: var int; output: var (Table[K, V]|OrderedTable[K, V])) =
+proc fromData*[K, V](data: openArray[byte]; pos: var int; output: var (Table[K, V]|OrderedTable[K, V])) {.nosan, nocov.} =
   let len = readInt32(data, pos).int
   for i in 0 ..< len:
     var key: K
     fromData(data, pos, key)
     fromData(data, pos, mgetOrPut(output, key, default(V)))
 
-proc toData*[T](data: var openArray[byte]; pos: var int; input: ref T) =
+proc toData*[T](data: var openArray[byte]; pos: var int; input: ref T) {.nosan, nocov.} =
   let isSome = input != nil
   toData(data, pos, isSome)
   if isSome:
     toData(data, pos, input[])
 
-proc fromData*[T](data: openArray[byte]; pos: var int; output: var ref T;) =
+proc fromData*[T](data: openArray[byte]; pos: var int; output: var ref T) {.nosan, nocov.} =
   let isSome = readBool(data, pos)
   if isSome:
     new(output)
@@ -195,13 +194,13 @@ proc fromData*[T](data: openArray[byte]; pos: var int; output: var ref T;) =
   else:
     output = nil
 
-proc toData*[T](data: var openArray[byte]; pos: var int; input: Option[T]) =
+proc toData*[T](data: var openArray[byte]; pos: var int; input: Option[T]) {.nosan, nocov.} =
   let isSome = isSome(input)
   toData(data, pos, isSome)
   if isSome:
     toData(data, pos, get(input))
 
-proc fromData*[T](data: openArray[byte]; pos: var int; output: var Option[T]) =
+proc fromData*[T](data: openArray[byte]; pos: var int; output: var Option[T]) {.nosan, nocov.} =
   let isSome = readBool(data, pos)
   if isSome:
     var tmp: T
@@ -210,28 +209,28 @@ proc fromData*[T](data: openArray[byte]; pos: var int; output: var Option[T]) =
   else:
     output = none[T]()
 
-proc toData*[T: tuple](data: var openArray[byte]; pos: var int; input: T) =
+proc toData*[T: tuple](data: var openArray[byte]; pos: var int; input: T) {.nosan, nocov.} =
   when supportsCopyMem(T):
     write(data, pos, input)
   else:
     for v in input.fields:
       toData(data, pos, v)
 
-proc toData*[T: object](data: var openArray[byte]; pos: var int; input: T) =
+proc toData*[T: object](data: var openArray[byte]; pos: var int; input: T) {.nosan, nocov.} =
   when supportsCopyMem(T):
     write(data, pos, input)
   else:
     for v in input.fields:
       toData(data, pos, v)
 
-proc fromData*[T: tuple](data: openArray[byte]; pos: var int; output: var T) =
+proc fromData*[T: tuple](data: openArray[byte]; pos: var int; output: var T) {.nosan, nocov.} =
   when supportsCopyMem(T):
     read(data, pos, output)
   else:
     for v in output.fields:
       fromData(data, pos, v)
 
-proc fromData*[T: object](data: openArray[byte]; pos: var int; output: var T) =
+proc fromData*[T: object](data: openArray[byte]; pos: var int; output: var T) {.nosan, nocov.} =
   when supportsCopyMem(T):
     read(data, pos, output)
   else:
@@ -243,4 +242,3 @@ proc toData*[T: distinct](data: var openArray[byte]; pos: var int; input: T) {.i
 
 proc fromData*[T: distinct](data: openArray[byte]; pos: var int; output: var T) {.inline.} =
   fromData(data, pos, output.distinctBase)
-#{.pop.}

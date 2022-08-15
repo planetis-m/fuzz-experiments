@@ -51,6 +51,9 @@ type
 proc toUnstructured(data: ptr UncheckedArray[byte]; len: int): Unstructured =
   Unstructured(data: data, pos: 0, len: len)
 
+template failIf(condition: typed) =
+  if condition: return false
+
 proc readData(x: var Unstructured, buffer: pointer, bufLen: int): int =
   result = min(bufLen, x.len - x.pos)
   if result > 0:
@@ -61,18 +64,15 @@ proc readData(x: var Unstructured, buffer: pointer, bufLen: int): int =
 
 proc read[T](x: var Unstructured, res: var T): bool =
   result = true
-  if readData(x, addr res, sizeof(T)) != sizeof(T): # all happens here
-    result = false
+  failIf readData(x, addr res, sizeof(T)) != sizeof(T)
 
 proc fromBin(dst: var string; x: var Unstructured): bool  =
+  result = true
   var len = 0'i32
-  result = false
-  if read(x, len):
-    result = true
-    dst.setLen(len)
-    if len > 0:
-      if readData(x, dst[0].addr, len) != len:
-        result = false
+  failIf not read(x, len)
+  dst.setLen(len)
+  if len > 0:
+    failIf readData(x, dst[0].addr, len) != len
 
 proc writeData(x: var seq[byte], pos: var int, buffer: pointer, bufLen: int) =
   if bufLen <= 0:
@@ -134,9 +134,9 @@ proc customMutator*(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int6
   var r = initRand(seed)
   mutate(x, maxLen - x.byteSize, r)
   var pos = 0
-  var tmp: seq[byte] = @[] #newSeq[byte](maxLen)
+  var tmp: seq[byte] = newSeqOfCap[byte](len*2)
   write(tmp, pos, x)
-  result = pos
+  result = tmp.len
   if result <= maxLen:
     copyMem(data, addr tmp[0], result)
   else:

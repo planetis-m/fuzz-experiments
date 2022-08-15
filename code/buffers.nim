@@ -6,6 +6,8 @@
 # - Order of arguments is reversed in comparison to the read procs. (?)
 # - LPM deserializes to a string which uses SSO for 22 bytes.
 # - Should CoderState be split and everything return a bool?
+# - enums must be checked with this design! (so no copymem)
+# - let's skip the first byte ffs.
 from typetraits import supportsCopyMem, distinctBase
 
 # Yep LPM disassembly, shows zero coverage, which I can't get rid of.

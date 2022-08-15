@@ -71,6 +71,8 @@ proc byteSize*[T: object](o: T): int {.inline.} =
     result = 0
     for v in o.fields: result.inc byteSize(v)
 
+proc byteSize*[T: distinct](x: T): int {.inline.} = byteSize(x.distinctBase)
+
 proc writeData*(data: var openArray[byte], pos: var int, buffer: pointer, bufLen: int) =
   if bufLen <= 0:
     return

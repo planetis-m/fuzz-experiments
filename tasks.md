@@ -40,6 +40,7 @@ DONE after 4/8
 - [X] Spent time investigating why I can't reproduce results from 2days ago. (0.75h) 14/8
 - [X] Check percentage of duplicate mutations produced by the graph mutator. (0.25h) 15/8
 - [X] Finish the serialization from buffer to types. (see pages 105,116) (2h) 15/8
+- [X] Easy: missing byteSize overloads. 15/8
 
 TODO
 ====

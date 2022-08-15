@@ -18,6 +18,59 @@ proc raiseEncodingDefect() {.noinline, noreturn.} =
 proc raiseDecodingDefect() {.noinline, noreturn.} =
   raise newException(DecodingDefect, "Can't read bytes from buffer.")
 
+proc byteSize*(x: bool): int {.inline.} = sizeof(x)
+proc byteSize*(x: char): int {.inline.} = sizeof(x)
+proc byteSize*[T: SomeNumber](x: T): int {.inline.} = sizeof(x)
+proc byteSize*[T: enum](x: T): int {.inline.} = sizeof(x)
+proc byteSize*[T](x: set[T]): int {.inline.} = sizeof(x)
+proc byteSize*(x: string): int {.inline.} = sizeof(int32) + x.len
+
+proc byteSize*[S, T](x: array[S, T]): int {.inline.} =
+  when supportsCopyMem(T):
+    result = sizeof(x)
+  else:
+    result = 0
+    for elem in x.items: result.inc byteSize(elem)
+
+proc byteSize*[T](x: seq[T]): int {.inline.} =
+  when supportsCopyMem(T):
+    result = sizeof(int32) + x.len * sizeof(T)
+  else:
+    result = sizeof(int32)
+    for elem in x.items: result.inc byteSize(elem)
+
+proc byteSize*[T](o: SomeSet[T]): int {.inline.} =
+  result = sizeof(int32)
+  for elem in o.items: result.inc byteSize(elem)
+
+proc byteSize*[K, V](o: (Table[K, V]|OrderedTable[K, V])): int {.inline.} =
+  result = sizeof(int32)
+  for k, v in o.pairs:
+    result.inc byteSize(k)
+    result.inc byteSize(v)
+
+proc byteSize*[T](o: ref T): int {.inline.} =
+  result = sizeof(bool)
+  if o != nil: result.inc byteSize(o[])
+
+proc byteSize*[T](o: Option[T]): int {.inline.} =
+  result = sizeof(bool)
+  if isSome(o): result.inc byteSize(get(o))
+
+proc byteSize*[T: tuple](o: T): int {.inline.} =
+  when supportsCopyMem(T):
+    result = sizeof(o)
+  else:
+    result = 0
+    for v in o.fields: result.inc byteSize(v)
+
+proc byteSize*[T: object](o: T): int {.inline.} =
+  when supportsCopyMem(T):
+    result = sizeof(o)
+  else:
+    result = 0
+    for v in o.fields: result.inc byteSize(v)
+
 proc writeData*(data: var openArray[byte], pos: var int, buffer: pointer, bufLen: int) =
   if bufLen <= 0:
     return

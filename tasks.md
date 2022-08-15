@@ -39,12 +39,12 @@ DONE after 4/8
 - [X] Write more fuzz targets (3/3) (2h)
 - [X] Spent time investigating why I can't reproduce results from 2days ago. (0.75h) 14/8
 - [X] Check percentage of duplicate mutations produced by the graph mutator. (0.25h) 15/8
+- [X] Finish the serialization from buffer to types. (see pages 105,116) (2h) 15/8
 
 TODO
 ====
 
 - [ ] See if hashing the seq and comparing with an old hash improves performance. (1.25h+) 14/8-
-- [ ] Finish the serialization from buffer to types. (see pages 105,116)
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)

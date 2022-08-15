@@ -45,7 +45,6 @@ TODO
 ====
 
 - [ ] Finish the serialization from buffer to types. (see pages 105,116)
-- [ ] See if the original graph mutator performs any better than the 'dumb' one.
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
@@ -56,6 +55,7 @@ MAYBE
 =====
 
 - [ ] Experiment with the idea of trying to mutate everything at once. (might not work well)
+- [ ] See if the original graph mutator performs any better than the 'dumb' one.
 
 POSTPONED after first release
 =============================

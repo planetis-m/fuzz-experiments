@@ -1,8 +1,7 @@
 # Procedures dealing with serialization from/to libFuzzer's input buffer. Since the custom
 # mutator is in control of the process, there should be no errors. And if there are, they
-# should be fatal and their code should be fixed. User may also run the fuzzer without any
-# sanitizer, which means that errors should always be detected instead of working with
-# garbage values.
+# should be fatal and the code should be fixed. User may also run the fuzzer without any
+# sanitizer, which means that errors should always be detected.
 import std/[options, tables, sets]
 from typetraits import supportsCopyMem, distinctBase
 

@@ -161,30 +161,18 @@ proc toData*[T](data: var openArray[byte]; pos: var int; input: SomeSet[T]) =
   for elem in input.items:
     toData(data, pos, elem)
 
-proc toData*[K, V](data: var openArray[byte]; pos: var int; input: (Table[K, V]|OrderedTable[K, V])) =
-  write(data, pos, int32(input.len))
-  for k, v in input.pairs:
-    toData(data, pos, k)
-    toData(data, pos, v)
-
-proc toData*[T](data: var openArray[byte]; pos: var int; input: ref T) =
-  let isSome = input != nil
-  toData(data, pos, isSome)
-  if isSome:
-    toData(data, pos, input[])
-
-proc toData*[T](data: var openArray[byte]; pos: var int; input: Option[T]) =
-  let isSome = isSome(input)
-  toData(data, pos, isSome)
-  if isSome:
-    toData(data, pos, get(input))
-
 proc fromData*[T](data: openArray[byte]; pos: var int; output: var SomeSet[T]) =
   let len = readInt32(data, pos).int
   for i in 0..<len:
     var tmp: T
     fromData(data, pos, tmp)
     output.incl(tmp)
+
+proc toData*[K, V](data: var openArray[byte]; pos: var int; input: (Table[K, V]|OrderedTable[K, V])) =
+  write(data, pos, int32(input.len))
+  for k, v in input.pairs:
+    toData(data, pos, k)
+    toData(data, pos, v)
 
 proc fromData*[K, V](data: openArray[byte]; pos: var int; output: var (Table[K, V]|OrderedTable[K, V])) =
   let len = readInt32(data, pos).int
@@ -193,6 +181,12 @@ proc fromData*[K, V](data: openArray[byte]; pos: var int; output: var (Table[K, 
     fromData(data, pos, key)
     fromData(data, pos, mgetOrPut(output, key, default(V)))
 
+proc toData*[T](data: var openArray[byte]; pos: var int; input: ref T) =
+  let isSome = input != nil
+  toData(data, pos, isSome)
+  if isSome:
+    toData(data, pos, input[])
+
 proc fromData*[T](data: openArray[byte]; pos: var int; output: var ref T;) =
   let isSome = readBool(data, pos)
   if isSome:
@@ -200,6 +194,12 @@ proc fromData*[T](data: openArray[byte]; pos: var int; output: var ref T;) =
     fromData(data, pos, output[])
   else:
     output = nil
+
+proc toData*[T](data: var openArray[byte]; pos: var int; input: Option[T]) =
+  let isSome = isSome(input)
+  toData(data, pos, isSome)
+  if isSome:
+    toData(data, pos, get(input))
 
 proc fromData*[T](data: openArray[byte]; pos: var int; output: var Option[T]) =
   let isSome = readBool(data, pos)

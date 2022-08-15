@@ -38,7 +38,7 @@ DONE after 4/8
 - [X] Implement mutator for simple objects (generic) (3h) 11/8
 - [X] Write more fuzz targets (3/3) (2h)
 - [X] Spent time investigating why I can't reproduce results from 2days ago. (0.75h) 14/8
-- [X] Check percentage of duplicate mutations produced by the graph mutator. (0.25) 15/8
+- [X] Check percentage of duplicate mutations produced by the graph mutator. (0.25h) 15/8
 
 TODO
 ====

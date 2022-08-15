@@ -13,6 +13,7 @@
 # TODO: Add crossover simple merge
 # Both mutators seem to perform the same in terms of new coverage, but second one is much faster.
 # New mutator produces 2x more duplicates!
+# Worst case scenario (object is maxLen) with a cache + static buffer it takes 4*4096=25% of my static memory!
 
 when defined(fuzzer):
   const

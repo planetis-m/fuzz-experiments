@@ -49,7 +49,9 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
-- [ ] Adapt last mutation cache
+- [ ] Adapt last mutation cache.
+- [ ] Step though LPM graph example to understand how it handles nested messages mutation.
+- [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover.
 
 MAYBE
 =====

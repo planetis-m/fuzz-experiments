@@ -49,6 +49,8 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
+- [ ] Check percentage of duplicate mutations produced by the graph mutator.
+- [ ] Adapt last mutation cache
 
 MAYBE
 =====

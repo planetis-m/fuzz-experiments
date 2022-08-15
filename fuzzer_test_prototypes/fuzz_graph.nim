@@ -130,6 +130,33 @@ when defined(fuzzer) and isMainModule:
       let index = rand(r, result.high)
       mutate(result[index], sizeIncreaseHint, r)
 
+  proc mutateSeq3[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
+      r: var Rand): seq[T] =
+    template newInput: untyped =
+      (var tmp = default(T); mutate(tmp, sizeIncreaseHint, r); tmp)
+    result = value
+    var count = 0
+    while result.len > 0 and r.rand(bool):
+      result.delete(rand(r, result.high))
+      dec count
+    while result.len < userMax and sizeIncreaseHint > 0 and
+        result.byteSize < sizeIncreaseHint and r.rand(bool):
+      let index = rand(r, result.len)
+      result.insert(newInput(), index)
+      inc count
+    # There is a chance we delete and then insert the same item.
+    if count != 0:
+      return result
+    if result.len == 0:
+      result.add(newInput)
+      return result
+    #elif count == 0:
+      #let index = rand(r, result.high-1)
+      #swap(result[index], result[index+1])
+    else:
+      let index = rand(r, result.high)
+      mutate(result[index], sizeIncreaseHint, r)
+
   type
     SeqMutator = enum
       Delete,

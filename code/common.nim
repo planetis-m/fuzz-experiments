@@ -97,40 +97,40 @@ proc read*[T](data: openArray[byte], pos: var int, output: var T) =
   if readData(data, pos, output.addr, sizeof(output)) != sizeof(output):
     raiseDecodingDefect()
 
-proc readChar*(data: openArray[byte], pos: var int): char =
+proc readChar*(data: openArray[byte], pos: var int): char {.inline.} =
   read(data, pos, result)
 
-proc readBool*(data: openArray[byte], pos: var int): bool =
+proc readBool*(data: openArray[byte], pos: var int): bool {.inline.} =
   read(data, pos, result)
 
-proc readInt8*(data: openArray[byte], pos: var int): int8 =
+proc readInt8*(data: openArray[byte], pos: var int): int8 {.inline.} =
   read(data, pos, result)
 
-proc readInt16*(data: openArray[byte], pos: var int): int16 =
+proc readInt16*(data: openArray[byte], pos: var int): int16 {.inline.} =
   read(data, pos, result)
 
-proc readInt32*(data: openArray[byte], pos: var int): int32 =
+proc readInt32*(data: openArray[byte], pos: var int): int32 {.inline.} =
   read(data, pos, result)
 
-proc readInt64*(data: openArray[byte], pos: var int): int64 =
+proc readInt64*(data: openArray[byte], pos: var int): int64 {.inline.} =
   read(data, pos, result)
 
-proc readUint8*(data: openArray[byte], pos: var int): uint8 =
+proc readUint8*(data: openArray[byte], pos: var int): uint8 {.inline.} =
   read(data, pos, result)
 
-proc readUint16*(data: openArray[byte], pos: var int): uint16 =
+proc readUint16*(data: openArray[byte], pos: var int): uint16 {.inline.} =
   read(data, pos, result)
 
-proc readUint32*(data: openArray[byte], pos: var int): uint32 =
+proc readUint32*(data: openArray[byte], pos: var int): uint32 {.inline.} =
   read(data, pos, result)
 
-proc readUint64*(data: openArray[byte], pos: var int): uint64 =
+proc readUint64*(data: openArray[byte], pos: var int): uint64 {.inline.} =
   read(data, pos, result)
 
-proc readFloat32*(data: openArray[byte], pos: var int): float32 =
+proc readFloat32*(data: openArray[byte], pos: var int): float32 {.inline.} =
   read(data, pos, result)
 
-proc readFloat64*(data: openArray[byte], pos: var int): float64 =
+proc readFloat64*(data: openArray[byte], pos: var int): float64 {.inline.} =
   read(data, pos, result)
 
 proc toData*(data: var openArray[byte]; pos: var int; input: bool) {.nosan, nocov.} =

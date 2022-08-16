@@ -1,5 +1,6 @@
 # Compile with: nim c --cc:clang --mm:arc --panics:on -d:useMalloc -t:"-fsanitize=fuzzer,address,undefined" -l:"-fsanitize=fuzzer,address,undefined" -d:nosignalhandler --nomain:on -d:release -g -d:runFuzzTests fuzz_graph_cache
 # Runs at 7200 exec/s versus previous one at 5500 exec/s!
+# -seed=2998840246 3891635133
 when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
@@ -200,7 +201,7 @@ when defined(runFuzzTests) and isMainModule:
       cache: typ
 
     func testOneInput(x: typ) =
-      when defined(dumpFuzzInput): echo(x)
+      when defined(dumpFuzzInput): debugEcho(x)
       body
 
     proc testOneInputImpl(data: ptr UncheckedArray[byte], len: int): cint {.

@@ -195,42 +195,46 @@ when defined(runFuzzTests) and isMainModule:
     var
       buffer: seq[byte] = @[0xf1'u8]
       cache: typ
-      step = 0
-      total = 0
-      yes = 0
+
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
-      inc total
       if equals(toOpenArray(data, 0, len-1), buffer):
-        inc yes
         fuzzTarget(cache)
       else:
         var y: typ
         var pos = 1
         fromData(toOpenArray(data, 0, len-1), pos, y)
         fuzzTarget(y)
-      inc step
-      if step mod 10000 == 0: echo (yes/total)*100
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
       var r = initRand(seed)
-      var y: typ
-      if len > 1:
-        var pos = 1
-        fromData(toOpenArray(data, 0, len-1), pos, y)
-      mutate(y, maxLen-y.byteSize, r)
-      result = y.byteSize+1 # +1 for the skipped byte
-      if result <= maxLen:
-        setLen(buffer, result)
-        var pos = 1
-        toData(buffer, pos, y)
-        assert pos == result
-        copyMem(data, addr buffer[0], result)
-        cache = move y
-      else: result = len
+      if equals(toOpenArray(data, 0, len-1), buffer):
+        mutate(cache, maxLen-cache.byteSize, r)
+        result = cache.byteSize+1 # +1 for the skipped byte
+        if result <= maxLen:
+          setLen(buffer, result)
+          var pos = 1
+          toData(buffer, pos, cache)
+          assert pos == result
+          copyMem(data, addr buffer[0], result)
+        else: result = len
+      else:
+        var y: typ
+        if len > 1:
+          var pos = 1
+          fromData(toOpenArray(data, 0, len-1), pos, y)
+        result = y.byteSize+1 # +1 for the skipped byte
+        if result <= maxLen:
+          setLen(buffer, result)
+          var pos = 1
+          toData(buffer, pos, y)
+          assert pos == result
+          copyMem(data, addr buffer[0], result)
+          cache = move y
+        else: result = len
 
   func fuzzTarget(x: Graph[int8]) =
     when defined(dumpFuzzInput): debugEcho(x)

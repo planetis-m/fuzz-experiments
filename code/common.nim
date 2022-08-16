@@ -18,7 +18,7 @@ proc raiseEncodingDefect() {.noinline, noreturn.} =
 proc raiseDecodingDefect() {.noinline, noreturn.} =
   raise newException(DecodingDefect, "Can't read bytes from buffer.")
 
-proc equal*(a, b: openArray[byte]): bool {.nosan, nocov.} =
+proc equals*(a, b: openArray[byte]): bool {.nosan, nocov.} =
   if a.len != b.len:
     result = false
   else: result = equalMem(addr a, addr b, a.len)

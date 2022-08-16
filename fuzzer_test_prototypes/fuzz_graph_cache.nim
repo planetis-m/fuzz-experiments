@@ -202,7 +202,7 @@ when defined(runFuzzTests) and isMainModule:
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
-      if buffer.len > 0 and equal(toOpenArray(data, 1, len-1), buffer):
+      if buffer.len > 0 and equals(toOpenArray(data, 1, len-1), buffer):
         testOneInput(cache)
       else:
         var y: typ
@@ -212,20 +212,20 @@ when defined(runFuzzTests) and isMainModule:
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
-      var y: typ
-      var pos = 0
-      if len > 1:
-        fromData(toOpenArray(data, 1, len-1), pos, y)
       var r = initRand(seed)
+      var y: typ
+      if len > 1:
+        var pos = 0
+        fromData(toOpenArray(data, 1, len-1), pos, y)
       mutate(y, maxLen-y.byteSize, r)
       result = y.byteSize
       if result <= maxLen:
-        pos = 0
         setLen(buffer, result)
+        var pos = 0
         toData(buffer, pos, y)
-        cache = move y
         assert pos == result
         copyMem(addr data[1], addr buffer[0], result)
+        cache = move y
         inc result # +1 for the skipped byte
       else: result = len
 

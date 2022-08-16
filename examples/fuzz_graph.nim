@@ -88,7 +88,7 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[7].edges.len == 0:
       assert false
 
-  defaultMutator(Graph[int8])
+  defaultMutator(Graph[int8], fuzzTarget)
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

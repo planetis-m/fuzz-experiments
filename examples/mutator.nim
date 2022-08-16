@@ -126,13 +126,21 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
+
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-
   var
     buffer: seq[byte] = @[0xf1'u8]
     cache: T
+
+  proc getX(x: var T; data: ptr UncheckedArray[byte], len: int): var T =
+    if equals(toOpenArray(data, 0, len-1), buffer):
+      result = cache
+    else:
+      var pos = 1
+      fromData(toOpenArray(data, 0, len-1), pos, x)
+      result = x
 
   proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
     quit("Caught unhandled exception: " & getCurrentExceptionMsg())
@@ -141,17 +149,10 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
     if len <= 1: return # ignore '\n' passed by LibFuzzer.
-    if equals(toOpenArray(data, 0, len-1), buffer):
-      try:
-        target(cache)
-      except: quitWithMsg()
-    else:
-      var y: T
-      var pos = 1
-      fromData(toOpenArray(data, 0, len-1), pos, y)
-      try:
-        target(y)
-      except: quitWithMsg()
+    var y: T
+    try:
+      target(getX(y, data, len))
+    except: quitWithMsg()
 
   proc mutatorImpl(t: var T; data: pointer; maxLen: int; r: var Rand; res: var int): bool =
     mutate(t, maxLen-t.byteSize, r)

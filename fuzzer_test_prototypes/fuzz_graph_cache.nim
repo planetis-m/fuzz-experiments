@@ -189,6 +189,11 @@ when defined(runFuzzTests) and isMainModule:
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
+  proc equal(a, b: openArray[byte]): bool {.nosan, nocov.} =
+    if a.len != b.len:
+      result = false
+    else: result = equalMem(addr a, addr b, a.len)
+
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
     var
       buffer: seq[byte] = @[]
@@ -198,14 +203,11 @@ when defined(runFuzzTests) and isMainModule:
       when defined(dumpFuzzInput): echo(x)
       body
 
-    proc equals(a, b: openArray[byte]): bool {.nosan, nocov.} =
-      equalMem(addr a, addr b, min(a.len, b.len))
-
     proc testOneInputImpl(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
-      if equals(toOpenArray(data, 1, len-1), buffer):
+      if equal(toOpenArray(data, 1, len-1), buffer):
         testOneInput(cache)
       else:
         var y: typ

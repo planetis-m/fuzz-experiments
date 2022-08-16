@@ -126,7 +126,7 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
-template defaultMutator*[T](target: proc (x: T) {.nimcall.}) =
+template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   var

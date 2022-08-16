@@ -48,6 +48,8 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
 when defined(runFuzzTests) and isMainModule:
   import mutator
 
+  {.experimental: "strictFuncs".}
+
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
@@ -57,7 +59,8 @@ when defined(runFuzzTests) and isMainModule:
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
-  fuzzTarget(x, Graph[int8]):
+  func fuzzTarget(x: Graph[int8]) =
+    when defined(dumpFuzzInput): debugEcho(x)
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and
         x.nodes[1].data == 3 and
@@ -84,3 +87,5 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[6].edges.len == 0 and
         x.nodes[7].edges.len == 0:
       assert false
+
+  defaultMutator(Graph[int8])

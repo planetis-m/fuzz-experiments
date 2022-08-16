@@ -189,26 +189,22 @@ when defined(runFuzzTests) and isMainModule:
 
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
-  template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
+  template defaultMutator(typ: typedesc) =
     var
       buffer: seq[byte] = @[0xf1'u8]
       cache: typ
 
-    func testOneInput(x: typ) =
-      when defined(dumpFuzzInput): debugEcho(x)
-      body
-
-    proc testOneInputImpl(data: ptr UncheckedArray[byte], len: int): cint {.
+    proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
       if equals(toOpenArray(data, 0, len-1), buffer):
-        testOneInput(cache)
+        fuzzTarget(cache)
       else:
         var y: typ
         var pos = 1
         fromData(toOpenArray(data, 0, len-1), pos, y)
-        testOneInput(y)
+        fuzzTarget(y)
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
@@ -228,7 +224,8 @@ when defined(runFuzzTests) and isMainModule:
         cache = move y
       else: result = len
 
-  fuzzTarget(x, Graph[int8]):
+  func fuzzTarget(x: Graph[int8]) =
+    when defined(dumpFuzzInput): debugEcho(x)
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and
         x.nodes[1].data == 3 and
@@ -255,6 +252,8 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[6].edges.len == 0 and
         x.nodes[7].edges.len == 0:
       doAssert false
+
+  defaultMutator(Graph[int8])
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

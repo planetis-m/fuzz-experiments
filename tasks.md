@@ -42,6 +42,7 @@ DONE after 4/8
 - [X] Finish the serialization from buffer to types. (see pages 105,116) (2h) 15/8
 - [X] Easy: missing byteSize overloads. 15/8
 - [X] Adapt last mutation cache. (0.5h) 16/8
+- [X] testOneInput parameter should be immutable, also cut more time. (0.5h) 16/8
 
 TODO
 ====
@@ -53,7 +54,6 @@ TODO
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Step though LPM graph example to understand how it handles nested messages mutation.
 - [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover.
-- [ ] testOneInput parameter should be immutable!
 
 MAYBE
 =====

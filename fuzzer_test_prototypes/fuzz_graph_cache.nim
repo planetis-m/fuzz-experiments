@@ -1,4 +1,5 @@
-# Runs at 6800 exec/s versus previous one at 5500 exec/s!
+# Compile with: nim c --cc:clang --mm:arc --panics:on -d:useMalloc -t:"-fsanitize=fuzzer,address,undefined" -l:"-fsanitize=fuzzer,address,undefined" -d:nosignalhandler --nomain:on -d:release -g -d:runFuzzTests fuzz_graph_cache
+# Runs at 7200 exec/s versus previous one at 5500 exec/s!
 when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
@@ -185,6 +186,7 @@ when defined(runFuzzTests) and isMainModule:
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
+  {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
@@ -192,34 +194,42 @@ when defined(runFuzzTests) and isMainModule:
       buffer: seq[byte] = @[]
       cache: typ
 
-    proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
-        exportc: "LLVMFuzzerTestOneInput", raises: [].} =
-      result = 0
-      if len <= 1: return
-      var x: typ
-      if equalMem(addr data[1], addr buffer[0], min(buffer.len, len-1)):
-        x = move cache
-      else:
-        var pos = 0
-        fromData(toOpenArray(data, 1, len-1), pos, x)
+    func testOneInput(x: typ) =
       when defined(dumpFuzzInput): echo(x)
       body
 
+    proc equals(a, b: openArray[byte]): bool {.nosan, nocov.} =
+      equalMem(addr a, addr b, min(a.len, b.len))
+
+    proc testOneInputImpl(data: ptr UncheckedArray[byte], len: int): cint {.
+        exportc: "LLVMFuzzerTestOneInput", raises: [].} =
+      result = 0
+      if len <= 1: return # ignore '\n' passed by LibFuzzer.
+      if equals(toOpenArray(data, 1, len-1), buffer):
+        testOneInput(cache)
+      else:
+        var y: typ
+        var pos = 0
+        fromData(toOpenArray(data, 1, len-1), pos, y)
+        testOneInput(y)
+
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
-      var x: typ
+      var y: typ
       var pos = 0
       if len > 1:
-        fromData(toOpenArray(data, 1, len-1), pos, x)
+        fromData(toOpenArray(data, 1, len-1), pos, y)
       var r = initRand(seed)
-      mutate(x, maxLen-x.byteSize, r)
-      result = x.byteSize+1 # +1 for the skipped byte
+      mutate(y, maxLen-y.byteSize, r)
+      result = y.byteSize
       if result <= maxLen:
         pos = 0
-        setLen(buffer, result-1)
-        toData(buffer, pos, x)
-        cache = move x
-        copyMem(addr data[1], addr buffer[0], result-1)
+        setLen(buffer, result)
+        toData(buffer, pos, y)
+        cache = move y
+        assert pos == result
+        copyMem(addr data[1], addr buffer[0], result)
+        inc result # +1 for the skipped byte
       else: result = len
 
   fuzzTarget(x, Graph[int8]):

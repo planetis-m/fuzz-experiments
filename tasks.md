@@ -41,6 +41,7 @@ DONE after 4/8
 - [X] Check percentage of duplicate mutations produced by the graph mutator. (0.25h) 15/8
 - [X] Finish the serialization from buffer to types. (see pages 105,116) (2h) 15/8
 - [X] Easy: missing byteSize overloads. 15/8
+- [X] Adapt last mutation cache. (0.5h) 16/8
 
 TODO
 ====
@@ -50,7 +51,6 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
-- [ ] Adapt last mutation cache.
 - [ ] Step though LPM graph example to understand how it handles nested messages mutation.
 - [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover.
 

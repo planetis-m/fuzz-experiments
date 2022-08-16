@@ -187,13 +187,19 @@ when defined(runFuzzTests) and isMainModule:
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
+    var
+      buffer: seq[byte] = @[]
+      cache: typ
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return
       var x: typ
-      var pos = 0
-      fromData(toOpenArray(data, 1, len-1), pos, x)
+      if equalMem(addr data[1], addr buffer[0], min(buffer.len, len-1)):
+        x = move cache
+      else:
+        var pos = 0
+        fromData(toOpenArray(data, 1, len-1), pos, x)
       when defined(dumpFuzzInput): echo(x)
       body
 
@@ -208,9 +214,10 @@ when defined(runFuzzTests) and isMainModule:
       result = x.byteSize+1 # +1 for the skipped byte
       if result <= maxLen:
         pos = 0
-        var buf = newSeq[byte](result)
-        toData(buf, pos, x)
-        copyMem(addr data[1], addr buf[0], result-1)
+        setLen(buffer, result-1)
+        toData(buffer, pos, x)
+        cache = move x
+        copyMem(addr data[1], addr buffer[0], result-1)
       else: result = len
 
   fuzzTarget(x, Graph[int8]):

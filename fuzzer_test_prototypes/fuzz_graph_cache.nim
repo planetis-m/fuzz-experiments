@@ -195,18 +195,24 @@ when defined(runFuzzTests) and isMainModule:
     var
       buffer: seq[byte] = @[0xf1'u8]
       cache: typ
-
+      step = 0
+      total = 0
+      yes = 0
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
+      inc total
       if equals(toOpenArray(data, 0, len-1), buffer):
+        inc yes
         fuzzTarget(cache)
       else:
         var y: typ
         var pos = 1
         fromData(toOpenArray(data, 0, len-1), pos, y)
         fuzzTarget(y)
+      inc step
+      if step mod 10000 == 0: echo (yes/total)*100
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =

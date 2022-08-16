@@ -187,13 +187,7 @@ when defined(runFuzzTests) and isMainModule:
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
-  {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-
-  proc equal(a, b: openArray[byte]): bool {.nosan, nocov.} =
-    if a.len != b.len:
-      result = false
-    else: result = equalMem(addr a, addr b, a.len)
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
     var

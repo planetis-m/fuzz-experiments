@@ -18,6 +18,11 @@ proc raiseEncodingDefect() {.noinline, noreturn.} =
 proc raiseDecodingDefect() {.noinline, noreturn.} =
   raise newException(DecodingDefect, "Can't read bytes from buffer.")
 
+proc equal*(a, b: openArray[byte]): bool {.nosan, nocov.} =
+  if a.len != b.len:
+    result = false
+  else: result = equalMem(addr a, addr b, a.len)
+
 proc byteSize*(x: bool): int {.inline.} = sizeof(x)
 proc byteSize*(x: char): int {.inline.} = sizeof(x)
 proc byteSize*[T: SomeNumber](x: T): int {.inline.} = sizeof(x)

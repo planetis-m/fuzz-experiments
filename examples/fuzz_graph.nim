@@ -59,6 +59,8 @@ when defined(runFuzzTests) and isMainModule:
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
+  defaultMutator(Graph[int8])
+
   func fuzzTarget(x: Graph[int8]) =
     when defined(dumpFuzzInput): debugEcho(x)
     if x.nodes.len == 8 and
@@ -87,5 +89,3 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[6].edges.len == 0 and
         x.nodes[7].edges.len == 0:
       assert false
-
-  defaultMutator(Graph[int8])

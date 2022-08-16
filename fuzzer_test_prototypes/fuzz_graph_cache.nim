@@ -2,7 +2,7 @@
 # Runs at 7200 exec/s versus previous one at 5500 exec/s!
 # -seed=2998840246 3891635133
 # To support a customMutator template we need to define testOneInput in the same scope. We
-# would need to body: untyped parameters with the old scheme (not feasible).
+# would need two body parameters with the old scheme (not feasible).
 when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
@@ -230,7 +230,7 @@ when defined(runFuzzTests) and isMainModule:
 
   defaultMutator(Graph[int8])
 
-  func fuzzTarget(x: Graph[int8]) {.raises: [].} =
+  func fuzzTarget(x: Graph[int8]) =
     when defined(dumpFuzzInput): debugEcho(x)
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and

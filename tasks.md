@@ -53,6 +53,7 @@ TODO
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Step though LPM graph example to understand how it handles nested messages mutation.
 - [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover.
+- [ ] testOneInput parameter should be immutable!
 
 MAYBE
 =====

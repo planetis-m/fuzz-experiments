@@ -148,11 +148,11 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
-    if len <= 1: return # ignore '\n' passed by LibFuzzer.
-    var y: T
-    try:
-      target(getX(y, data, len))
-    except: quitWithMsg()
+    if len > 1: # ignore '\n' passed by LibFuzzer.
+      var y: T
+      try:
+        target(getX(y, data, len))
+      except: quitWithMsg()
 
   proc mutatorImpl(t: var T; data: pointer; maxLen: int; r: var Rand; res: var int): bool =
     mutate(t, maxLen-t.byteSize, r)

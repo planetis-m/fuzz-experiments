@@ -1,6 +1,6 @@
 # Compile with: nim c --cc:clang --mm:arc --panics:on -d:useMalloc -t:"-fsanitize=fuzzer,address,undefined" -l:"-fsanitize=fuzzer,address,undefined" -d:nosignalhandler --nomain:on -d:release -g -d:runFuzzTests fuzz_graph_cache
 # Runs at 7200 exec/s versus previous one at 5500 exec/s!
-# -seed=2998840246 3891635133
+# -seed=2706427051
 # To support a customMutator template we need to define testOneInput in the same scope. We
 # would need two body parameters with the old scheme (not feasible).
 when defined(runFuzzTests):
@@ -210,31 +210,29 @@ when defined(runFuzzTests) and isMainModule:
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
-      var r = initRand(seed)
-      if equals(toOpenArray(data, 0, len-1), buffer):
-        mutate(cache, maxLen-cache.byteSize, r)
-        result = cache.byteSize+1 # +1 for the skipped byte
+      template mutatorImpl(t, r: typed; moveToCache: untyped) =
+        mutate(t, maxLen-t.byteSize, r)
+        result = t.byteSize+1 # +1 for the skipped byte
         if result <= maxLen:
           setLen(buffer, result)
           var pos = 1
-          toData(buffer, pos, cache)
+          toData(buffer, pos, t)
           assert pos == result
           copyMem(data, addr buffer[0], result)
+          moveToCache
         else: result = len
+
+      var r = initRand(seed)
+      if equals(toOpenArray(data, 0, len-1), buffer):
+        mutatorImpl(cache, r):
+          discard ""
       else:
         var y: typ
         if len > 1:
           var pos = 1
           fromData(toOpenArray(data, 0, len-1), pos, y)
-        result = y.byteSize+1 # +1 for the skipped byte
-        if result <= maxLen:
-          setLen(buffer, result)
-          var pos = 1
-          toData(buffer, pos, y)
-          assert pos == result
-          copyMem(data, addr buffer[0], result)
+        mutatorImpl(y, r):
           cache = move y
-        else: result = len
 
   func fuzzTarget(x: Graph[int8]) =
     when defined(dumpFuzzInput): debugEcho(x)

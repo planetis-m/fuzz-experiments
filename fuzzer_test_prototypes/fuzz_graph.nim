@@ -17,7 +17,7 @@
 # todata takes 2% of runtime, while from* 11%, if we sacrifice speed for memory it would still be fine.
 # so write to seq, then swap with cache (and copyMem stays the same).
 
-when defined(fuzzer):
+when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
     MaxEdges = 2 # Limits number of edges
@@ -64,8 +64,8 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       fromNode.edges.delete(toNodeIdx)
       #x.deleteNode(toNode.int) #sneaky bug?
 
-when defined(fuzzer) and isMainModule:
-  import std/[random, sets], ".."/code/[buffers, sampler]
+when defined(runFuzzTests) and isMainModule:
+  import std/random, ".."/code/[buffers, sampler]
   from typetraits import distinctBase
 
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -249,9 +249,9 @@ when defined(fuzzer) and isMainModule:
 
   proc mutate[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateValue(value, r))
-#[
+
   proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))]#
+    repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
   proc mutate[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     if rand(r, RandomToDefaultRatio - 1) == 0:
@@ -263,20 +263,20 @@ when defined(fuzzer) and isMainModule:
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
-  #proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    #repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
-
-  #proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    #repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
-
-  proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), high(Natural), sizeIncreaseHint, r))
-
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxNodes, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
-    repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxEdges, sizeIncreaseHint, r))
+    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
+
+  #proc mutate[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), high(Natural), sizeIncreaseHint, r))
+
+  #proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxNodes, sizeIncreaseHint, r))
+
+  #proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
+    #repeatMutate2(mutateSeq2(value, r.rand(SeqMutator), MaxEdges, sizeIncreaseHint, r))
 
   template toPayload(data, len): untyped =
     toOpenArray(data, 0, len-1)
@@ -285,10 +285,6 @@ when defined(fuzzer) and isMainModule:
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
-    var
-      step = 0
-      duplicate = 0
-      total = 0
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
@@ -297,12 +293,8 @@ when defined(fuzzer) and isMainModule:
       fromData(x, toPayload(data, len), c)
       if not c.err:
         when defined(dumpFuzzInput): echo(x)
-        inc step
-        if step mod 10000 == 0:
-          echo "dup: ", duplicate
-          echo "percent : ", (duplicate/total)*100
         body
-    var cache: OrderedSet[array[4096, byte]]
+
     var buffer: array[4096, byte]
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
@@ -315,11 +307,8 @@ when defined(fuzzer) and isMainModule:
       reset(c)
       toData(x, buffer, c)
       result = c.pos
-      inc total
       if not c.err:
-        if buffer in cache: inc duplicate
         copyMem(data, addr buffer, result)
-        cache.incl buffer
       else: result = len
 
   fuzzTarget(x, Graph[int8]):

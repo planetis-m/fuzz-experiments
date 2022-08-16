@@ -126,26 +126,33 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
-template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
+template defaultMutator*(target: untyped) =
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
+  proc getT[T](t: proc (x: T) {.nimcall, noSideEffect.}): T = discard
+
+  proc wrap[T](x: T; target: proc (x: T) {.nimcall, noSideEffect.}) =
+    try:
+      target(x)
+    except:
+      quit("Caught unhandled exception: " & getCurrentExceptionMsg())
 
   var
     buffer: seq[byte] = @[0xf1'u8]
-    cache: T
+    cache: typeof(getT(target))
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
     if len <= 1: return # ignore '\n' passed by LibFuzzer.
     if equals(toOpenArray(data, 0, len-1), buffer):
-      target(cache)
+      wrap(cache, target)
     else:
-      var y: T
+      var y: typeof(getT(target))
       var pos = 1
       fromData(toOpenArray(data, 0, len-1), pos, y)
-      target(y)
+      wrap(y, target)
 
-  proc mutatorImpl(t: var T; data: pointer; maxLen: int; r: var Rand; res: var int): bool =
+  proc mutatorImpl(t: var typeof(getT(target)); data: pointer; maxLen: int; r: var Rand; res: var int): bool =
     mutate(t, maxLen-t.byteSize, r)
     res = t.byteSize+1 # +1 for the skipped byte
     result = res <= maxLen
@@ -163,7 +170,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       if not mutatorImpl(cache, data, maxLen, r, result):
         result = len
     else:
-      var y: T
+      var y: typeof(getT(target))
       if len > 1:
         var pos = 1
         fromData(toOpenArray(data, 0, len-1), pos, y)

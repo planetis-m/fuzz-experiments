@@ -184,35 +184,33 @@ when defined(runFuzzTests) and isMainModule:
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
-  template toPayload(data, len): untyped =
-    toOpenArray(data, 0, len-1)
-
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
+      if len <= 1: return
       var x: typ
-      var c: CoderState
-      fromData(x, toPayload(data, len), c)
-      if not c.err:
-        when defined(dumpFuzzInput): echo(x)
-        body
+      var pos = 0
+      fromData(toOpenArray(data, 1, len-1), pos, x)
+      when defined(dumpFuzzInput): echo(x)
+      body
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
       var x: typ
-      var c: CoderState
-      fromData(x, toPayload(data, len), c)
-      if c.err: reset(x)
+      var pos = 0
+      if len > 1:
+        fromData(toOpenArray(data, 1, len-1), pos, x)
       var r = initRand(seed)
       mutate(x, maxLen-x.byteSize, r)
-      reset(c)
-      toData(x, buffer, c)
-      result = c.pos
-      if not c.err:
-        copyMem(data, addr buffer, result)
+      result = x.byteSize+1 # +1 for the skipped byte
+      if result <= maxLen:
+        pos = 0
+        var buf = newSeq[byte](result)
+        toData(buf, pos, x)
+        copyMem(addr data[1], addr buf[0], result-1)
       else: result = len
 
   fuzzTarget(x, Graph[int8]):

@@ -196,6 +196,8 @@ when defined(runFuzzTests) and isMainModule:
       buffer: seq[byte] = @[0xf1'u8]
       cache: typ
 
+    func fuzzTarget(x {.inject.}: typ) {.raises: [].}
+
     proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
@@ -226,7 +228,9 @@ when defined(runFuzzTests) and isMainModule:
         cache = move y
       else: result = len
 
-  func fuzzTarget(x: Graph[int8]) =
+  defaultMutator(Graph[int8])
+
+  func fuzzTarget(x: Graph[int8]) {.raises: [].} =
     when defined(dumpFuzzInput): debugEcho(x)
     if x.nodes.len == 8 and
         x.nodes[0].data == 63 and
@@ -254,8 +258,6 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[6].edges.len == 0 and
         x.nodes[7].edges.len == 0:
       doAssert false
-
-  defaultMutator(Graph[int8])
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

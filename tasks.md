@@ -34,7 +34,7 @@ DONE after 4/8
 - [X] Find how to benchmark the mutator. (0.5h) 13/8
 - [X] Find a way to fix the composition issue caused by custom mutators and pick. (1h) 12/8
 - [X] Needs to check how size hints are used in LPM in sampling mutations (high priority) 13/8
-- [X] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1.5h) 27/7-13/8
+- [X] Prototype with the public API, defaultMutator(typ), fuzzTarget(it, typ), customMutator(it, typ, body) (1.5h) 27/7-16/8
 - [X] Implement mutator for simple objects (generic) (3h) 11/8
 - [X] Write more fuzz targets (3/3) (2h)
 - [X] Spent time investigating why I can't reproduce results from 2days ago. (0.75h) 14/8

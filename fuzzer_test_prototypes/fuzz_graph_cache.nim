@@ -191,7 +191,7 @@ when defined(runFuzzTests) and isMainModule:
 
   template fuzzTarget(x: untyped, typ: typedesc, body: untyped) =
     var
-      buffer: seq[byte] = @[]
+      buffer: seq[byte] = @[0xf1'u8]
       cache: typ
 
     func testOneInput(x: typ) =
@@ -202,12 +202,12 @@ when defined(runFuzzTests) and isMainModule:
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
-      if buffer.len > 0 and equals(toOpenArray(data, 1, len-1), buffer):
+      if equals(toOpenArray(data, 0, len-1), buffer):
         testOneInput(cache)
       else:
         var y: typ
-        var pos = 0
-        fromData(toOpenArray(data, 1, len-1), pos, y)
+        var pos = 1
+        fromData(toOpenArray(data, 0, len-1), pos, y)
         testOneInput(y)
 
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
@@ -215,18 +215,17 @@ when defined(runFuzzTests) and isMainModule:
       var r = initRand(seed)
       var y: typ
       if len > 1:
-        var pos = 0
-        fromData(toOpenArray(data, 1, len-1), pos, y)
+        var pos = 1
+        fromData(toOpenArray(data, 0, len-1), pos, y)
       mutate(y, maxLen-y.byteSize, r)
-      result = y.byteSize
+      result = y.byteSize+1 # +1 for the skipped byte
       if result <= maxLen:
         setLen(buffer, result)
-        var pos = 0
+        var pos = 1
         toData(buffer, pos, y)
         assert pos == result
-        copyMem(addr data[1], addr buffer[0], result)
+        copyMem(data, addr buffer[0], result)
         cache = move y
-        inc result # +1 for the skipped byte
       else: result = len
 
   fuzzTarget(x, Graph[int8]):

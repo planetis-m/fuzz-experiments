@@ -42,7 +42,7 @@ DONE after 4/8
 - [X] Finish the serialization from buffer to types. (see pages 105,116) (2h) 15/8
 - [X] Easy: missing byteSize overloads. 15/8
 - [X] Adapt last mutation cache. (0.5h) 16/8
-- [X] testOneInput parameter should be immutable, also cut more time. (0.5h) 16/8
+- [X] testOneInput parameter should be immutable, also cut more time. (2.0h) 16/8
 
 TODO
 ====

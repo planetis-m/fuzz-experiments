@@ -202,7 +202,7 @@ when defined(runFuzzTests) and isMainModule:
         exportc: "LLVMFuzzerTestOneInput", raises: [].} =
       result = 0
       if len <= 1: return # ignore '\n' passed by LibFuzzer.
-      if equal(toOpenArray(data, 1, len-1), buffer):
+      if buffer.len > 0 and equal(toOpenArray(data, 1, len-1), buffer):
         testOneInput(cache)
       else:
         var y: typ

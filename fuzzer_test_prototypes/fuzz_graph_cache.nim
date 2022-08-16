@@ -208,31 +208,31 @@ when defined(runFuzzTests) and isMainModule:
         fromData(toOpenArray(data, 0, len-1), pos, y)
         fuzzTarget(y)
 
+    proc mutatorImpl(t: var typ; data: pointer; maxLen: int; r: var Rand; res: var int): bool =
+      mutate(t, maxLen-t.byteSize, r)
+      res = t.byteSize+1 # +1 for the skipped byte
+      result = res <= maxLen
+      if result:
+        setLen(buffer, res)
+        var pos = 1
+        toData(buffer, pos, t)
+        assert pos == res
+        copyMem(data, addr buffer[0], res)
+
     proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
         exportc: "LLVMFuzzerCustomMutator", nosan.} =
-      template mutatorImpl(t, r: typed; moveToCache: untyped) =
-        mutate(t, maxLen-t.byteSize, r)
-        result = t.byteSize+1 # +1 for the skipped byte
-        if result <= maxLen:
-          setLen(buffer, result)
-          var pos = 1
-          toData(buffer, pos, t)
-          assert pos == result
-          copyMem(data, addr buffer[0], result)
-          moveToCache
-        else: result = len
-
       var r = initRand(seed)
       if equals(toOpenArray(data, 0, len-1), buffer):
-        mutatorImpl(cache, r):
-          discard ""
+        if not mutatorImpl(cache, data, maxLen, r, result):
+          result = len
       else:
         var y: typ
         if len > 1:
           var pos = 1
           fromData(toOpenArray(data, 0, len-1), pos, y)
-        mutatorImpl(y, r):
+        if mutatorImpl(y, data, maxLen, r, result):
           cache = move y
+        else: result = len
 
   func fuzzTarget(x: Graph[int8]) =
     when defined(dumpFuzzInput): debugEcho(x)

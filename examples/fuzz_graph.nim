@@ -46,7 +46,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       #x.deleteNode(toNode.int) #sneaky bug?
 
 when defined(runFuzzTests) and isMainModule:
-  import mutator
+  import std/random, mutator, common
 
   {.experimental: "strictFuncs".}
 
@@ -89,3 +89,14 @@ when defined(runFuzzTests) and isMainModule:
       assert false
 
   defaultMutator(Graph[int8])
+
+  #(nodes: @[
+    #(data: 63, edges: @[1, 2]),
+    #(data: 3, edges: @[3, 4]),
+    #(data: -56, edges: @[5, 6]),
+    #(data: 100, edges: @[7]),
+    #(data: -100, edges: @[]),
+    #(data: -78, edges: @[]),
+    #(data: 46, edges: @[]),
+    #(data: 120, edges: @[])
+  #])

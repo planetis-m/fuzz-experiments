@@ -152,7 +152,8 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       var x: T
       try:
         target(withInput(x, toOpenArray(data, 0, len-1)))
-      except: quitWithMsg()
+      except:
+        quitWithMsg()
 
   proc mutatorImpl(t: var T; data: pointer; maxLen: int; r: var Rand; res: var int): bool =
     mutate(t, maxLen-t.byteSize, r)

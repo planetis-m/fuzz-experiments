@@ -1,6 +1,8 @@
 # Compile with: nim c --cc:clang --mm:arc --panics:on -d:useMalloc -t:"-fsanitize=fuzzer,address,undefined" -l:"-fsanitize=fuzzer,address,undefined" -d:nosignalhandler --nomain:on -d:release -g -d:runFuzzTests fuzz_graph_cache
 # Runs at 7200 exec/s versus previous one at 5500 exec/s!
 # -seed=2998840246 3891635133
+# To support a customMutator template we need to define testOneInput in the same scope. We
+# would need to body: untyped parameters with the old scheme (not feasible).
 when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.

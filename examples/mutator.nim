@@ -171,4 +171,5 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       copyMem(data, addr buffer[0], result)
       cached = move x
     else:
+      setLen(buffer, 0)
       result = len

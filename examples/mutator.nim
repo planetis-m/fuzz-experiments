@@ -180,8 +180,10 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     inc step
     if step.isPowerOfTwo:
       echo "Step: ", step, " ", mostCommonHashes(duplicates)
-      if step == 8388608:
-        echo duplicates.hashesOften(10)
+      if step == 4194304:
+        try:
+          writeFile "duplicates.txt", $duplicates
+        except: discard
         quit()
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.

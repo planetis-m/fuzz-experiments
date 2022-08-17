@@ -43,7 +43,7 @@ DONE after 4/8
 - [X] Easy: missing byteSize overloads. 15/8
 - [X] Adapt last mutation cache. (0.5h) 16/8
 - [X] testOneInput parameter should be immutable, also cut more time. (2.0h) 16/8
-- [X] Cleanup new code. (1h) 16/8
+- [X] Cleanup new code. (2h) 16/8-17/8
 
 TODO
 ====

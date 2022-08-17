@@ -44,20 +44,21 @@ DONE after 4/8
 - [X] Adapt last mutation cache. (0.5h) 16/8
 - [X] testOneInput parameter should be immutable, also cut more time. (2.0h) 16/8
 - [X] Cleanup new code. (2h) 16/8-17/8
+- [X] Step through example mutator and gain knowledge of how it works and how it can be improved. (3.0h) 17/8
 
 TODO
 ====
 
-- [ ] See if hashing the seq and comparing with an old hash improves performance. (2.25h+) 14/8-
+- [ ] See if hashing the seq and comparing with an old hash improves performance. (1.25h+) 14/8-
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
-- [ ] Step though LPM graph example to understand how it handles nested messages mutation.
 
 MAYBE
 =====
 
+- [ ] Step though LPM graph example to understand how it handles nested messages mutation.
 - [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover.
 - [ ] Experiment with the idea of trying to mutate everything at once. (might not work well)
 - [ ] See if the original graph mutator performs any better than the 'dumb' one.

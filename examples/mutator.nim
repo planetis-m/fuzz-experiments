@@ -126,13 +126,28 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
+import hashes, tables
+
+proc mostCommonHashes(freqs: CountTable[Hash]): (seq[Hash], int) =
+  var values: seq[int]
+  for value in values(freqs):
+    values.add(value)
+  let best = max(values)
+  var words: seq[Hash]
+  for (key, value) in pairs(freqs):
+    if value == best:
+      words.add(key)
+  (words, best)
+
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-
+  import tables, math, hashes
   var
     buffer: seq[byte] = @[0xf1'u8]
     cached: T
+    duplicates = initCountTable[Hash](3_000_000)
+    step = 0
 
   proc input(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
     if equals(data, buffer):
@@ -145,15 +160,26 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
     quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
 
+  proc incDuplicates(data: openArray[byte]) {.nosan, nocov.} =
+    # 2471414957 is an empty object! Number of duplicates 597516
+    duplicates.inc hash(data)
+
+  proc writeStats() {.nosan, nocov.} =
+    inc step
+    if step.isPowerOfTwo:
+      echo "Step: ", step, " ", mostCommonHashes(duplicates)
+
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
+    var x: T
     if len > 1: # ignore '\n' passed by LibFuzzer.
-      var x: T
+      incDuplicates toOpenArray(data, 0, len-1)
       try:
         target(input(x, toOpenArray(data, 0, len-1)))
       except:
         quitWithMsg()
+      writeStats()
 
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =
@@ -171,5 +197,5 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       copyMem(data, addr buffer[0], result)
       cached = move x
     else:
-      setLen(buffer, 0)
+      setLen(buffer, 1)
       result = len

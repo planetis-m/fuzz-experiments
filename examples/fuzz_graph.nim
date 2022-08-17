@@ -1,5 +1,8 @@
-# -seed=2676125676
+# -seed=2676125676 good
+# -seed=2080551719 bad
 when defined(runFuzzTests):
+  import std/hashes
+
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
     MaxEdges = 2 # Limits number of edges
@@ -8,6 +11,7 @@ when defined(runFuzzTests):
     NodeIdx = distinct int
 
   proc `$`(x: NodeIdx): string {.borrow.}
+  proc hash(x: NodeIdx): Hash {.borrow.}
   proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:
   type

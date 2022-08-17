@@ -160,8 +160,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     var r = initRand(seed)
     var x: T
     if len > 1:
-      var pos = 1
-      fromData(toOpenArray(data, 0, len-1), pos, x)
+      x = input(x, toOpenArray(data, 0, len-1))
     mutate(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:
@@ -171,4 +170,5 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       assert pos == result
       copyMem(data, addr buffer[0], result)
       cached = move x
-    else: result = len
+    else:
+      result = len

@@ -122,42 +122,20 @@ proc mutate*[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
 
 proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
-    #reset(value)
+    reset(value)
     return
   mutateObj(value, sizeIncreaseHint, r)
-
-import hashes, tables
-
-proc mostCommonHashes*(freqs: CountTable[Hash]): (seq[Hash], int) =
-  var values: seq[int]
-  for value in values(freqs):
-    values.add(value)
-  let best = max(values)
-  var words: seq[Hash]
-  for (key, value) in pairs(freqs):
-    if value == best:
-      words.add(key)
-  (words, best)
-
-proc hashesOften*(freqs: var CountTable[Hash]; minTimes: int): OrderedTable[
-    seq[Hash], int] =
-  var done = false
-  while not done:
-    let (words, best) = mostCommonHashes(freqs)
-    if best >= minTimes:
-      result[words] = best
-      for word in words:
-        freqs.del(word)
-    else:
-      done = true
 
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-  import tables, math, hashes
+  import math, hashes
+
   var
     buffer: seq[byte] = @[0xf1'u8]
     cached: T
+    step = 0
+    count = 0
 
   proc input(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
     if equals(data, buffer):
@@ -170,33 +148,18 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
     quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
 
-  proc incDuplicates(data: openArray[byte]) {.nosan, nocov.} =
-    # 2471414957 is an empty object! Number of duplicates 597516
-    var x: T
-    let t = hash(data)
-    case t
-    of Hash 2471414957: echo(t, ", ", input(x, data))
-    of Hash 1482484010: echo(t, ", ", input(x, data))
-    of Hash 334650560:  echo(t, ", ", input(x, data))
-    of Hash 3501136755: echo(t, ", ", input(x, data))
-    of Hash 2695030238: echo(t, ", ", input(x, data))
-    of Hash 3786301041: echo(t, ", ", input(x, data))
-    of Hash 1187495338: echo(t, ", ", input(x, data))
-    of Hash 627269100:  echo(t, ", ", input(x, data))
-    of Hash 1957639542: echo(t, ", ", input(x, data))
-    of Hash 1242738241: echo(t, ", ", input(x, data))
-    else: discard
-
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =
     result = 0
     var x: T
     if len > 1: # ignore '\n' passed by LibFuzzer.
-      incDuplicates toOpenArray(data, 0, len-1)
+      if hash(toOpenArray(data, 0, len-1)) == 2471414957.Hash: inc count
       try:
         target(input(x, toOpenArray(data, 0, len-1)))
       except:
         quitWithMsg()
+      inc step
+      if step.isPowerOfTwo: echo "Empty: ", count
 
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =

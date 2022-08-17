@@ -1,4 +1,4 @@
-import std/random, common, sampler, hashes
+import std/random, common, sampler
 from typetraits import distinctBase
 
 proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -14,10 +14,6 @@ template `+!`(p: pointer, s: int): untyped =
 const
   RandomToDefaultRatio* = 100
   DefaultMutateWeight* = 1000000
-
-var
-  interesting = false
-  step = 0
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
@@ -57,7 +53,6 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
       result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, result.len)
     result.insert(newInput(), index)
-    if hash(result) == -3378888992924076032: echo step, " insert "
   # There is a chance we delete and then insert the same item.
   if result != value:
     return result
@@ -67,7 +62,6 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
   else:
     let index = rand(r, result.high)
     mutate(result[index], sizeIncreaseHint, r)
-    if hash(result) == -3378888992924076032: echo step, " mutate "
 
 proc sample*[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
   sample(x.distinctBase, depth, s, r, res)
@@ -135,7 +129,6 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-  import hashes
 
   var
     buffer: seq[byte] = @[0xf1'u8]
@@ -165,13 +158,9 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =
     var r = initRand(seed)
-    inc step
     var x: T
     if len > 1:
       x = move input(x, toOpenArray(data, 0, len-1))
-    let tmp = x
-    #if hash(toOpenArray(data, 0, len-1)) == 334650560.Hash:
-      #interesting = true
     mutate(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:
@@ -180,11 +169,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       toData(buffer, pos, x)
       assert pos == result
       copyMem(data, addr buffer[0], result)
-      if hash(toOpenArray(data, 0, len-1)) == 334650560.Hash:
-        echo step, " Before: ", tmp, " After: ", x
-        echo hash(x.nodes), " ", x.nodes
       cached = move x
     else:
       setLen(buffer, 1)
       result = len
-    interesting = false

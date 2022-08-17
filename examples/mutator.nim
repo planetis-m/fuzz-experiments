@@ -129,6 +129,7 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
+  import hashes
 
   var
     buffer: seq[byte] = @[0xf1'u8]
@@ -161,6 +162,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     var x: T
     if len > 1:
       x = move input(x, toOpenArray(data, 0, len-1))
+    let tmp = x
     mutate(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:
@@ -169,6 +171,9 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       toData(buffer, pos, x)
       assert pos == result
       copyMem(data, addr buffer[0], result)
+      if hash(toOpenArray(data, 0, len-1)) == 2471414957.Hash:
+        if tmp != x:
+          echo "Before: ", tmp, " After: ", x
       cached = move x
     else:
       setLen(buffer, 1)

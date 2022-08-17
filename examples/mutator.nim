@@ -133,6 +133,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   var
     buffer: seq[byte] = @[0xf1'u8]
     cached: T
+    step1, step2 = 0
 
   proc input(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
     if equals(data, buffer):
@@ -150,6 +151,10 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     result = 0
     var x: T
     if len > 1: # ignore '\n' passed by LibFuzzer.
+      inc step1
+      if step2 > step1:
+        echo "rejected input"
+        step1 = step2
       try:
         target(input(x, toOpenArray(data, 0, len-1)))
       except:
@@ -161,6 +166,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     var x: T
     if len > 1:
       x = move input(x, toOpenArray(data, 0, len-1))
+    inc step2
     mutate(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:

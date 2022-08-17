@@ -155,26 +155,20 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       except:
         quitWithMsg()
 
-  proc output(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
-    if equals(data, buffer):
-      result = cached
-    else:
-      if data.len > 1:
-        var pos = 1
-        fromData(data, pos, x)
-      result = x
-
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =
     var r = initRand(seed)
     var x: T
-    var y {.cursor.} = output(x, toOpenArray(data, 0, len-1))
-    mutate(y, maxLen-y.byteSize, r)
-    result = y.byteSize+1 # +1 for the skipped byte
+    if len > 1:
+      var pos = 1
+      fromData(toOpenArray(data, 0, len-1), pos, x)
+    mutate(x, maxLen-x.byteSize, r)
+    result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:
       setLen(buffer, result)
       var pos = 1
-      toData(buffer, pos, y)
+      toData(buffer, pos, x)
       assert pos == result
       copyMem(data, addr buffer[0], result)
+      cached = move x
     else: result = len

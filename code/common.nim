@@ -9,10 +9,10 @@ type
   EncodingDefect = object of Defect
   DecodingDefect = object of Defect
 
-proc raiseEncodingDefect() {.noinline, noreturn.} =
+proc raiseEncoding() {.noinline, noreturn.} =
   raise newException(EncodingDefect, "Can't write bytes to buffer.")
 
-proc raiseDecodingDefect() {.noinline, noreturn.} =
+proc raiseDecoding() {.noinline, noreturn.} =
   raise newException(DecodingDefect, "Can't read bytes from buffer.")
 
 proc equals*(a, b: openArray[byte]): bool =
@@ -79,7 +79,7 @@ proc writeData*(data: var openArray[byte], pos: var int, buffer: pointer, bufLen
   if bufLen <= 0:
     return
   if pos + bufLen > data.len:
-    raiseEncodingDefect()
+    raiseEncoding()
   else:
     copyMem(data[pos].addr, buffer, bufLen)
     inc(pos, bufLen)
@@ -97,7 +97,7 @@ proc readData*(data: openArray[byte], pos: var int, buffer: pointer, bufLen: int
 
 proc read*[T](data: openArray[byte], pos: var int, output: var T) =
   if readData(data, pos, output.addr, sizeof(output)) != sizeof(output):
-    raiseDecodingDefect()
+    raiseDecoding()
 
 proc readChar*(data: openArray[byte], pos: var int): char {.inline.} =
   read(data, pos, result)
@@ -173,7 +173,7 @@ proc fromData*(data: openArray[byte]; pos: var int; output: var string) =
   let len = readInt32(data, pos).int
   output.setLen(len)
   if readData(data, pos, cstring(output), len) != len:
-    raiseDecodingDefect()
+    raiseDecoding()
 
 proc toData*[S, T](data: var openArray[byte]; pos: var int; input: array[S, T]) =
   when supportsCopyMem(T):
@@ -185,7 +185,7 @@ proc toData*[S, T](data: var openArray[byte]; pos: var int; input: array[S, T]) 
 proc fromData*[S, T](data: openArray[byte]; pos: var int; output: var array[S, T]) =
   when supportsCopyMem(T):
     if readData(data, pos, output.addr, sizeof(output)) != sizeof(output):
-      raiseDecodingDefect()
+      raiseDecoding()
   else:
     for i in low(output)..high(output):
       fromData(data, pos, output[i])
@@ -206,7 +206,7 @@ proc fromData*[T](data: openArray[byte]; pos: var int; output: var seq[T]) =
     if len > 0:
       let bLen = len * sizeof(T)
       if readData(data, pos, output[0].addr, bLen) != bLen:
-        raiseDecodingDefect()
+        raiseDecoding()
   else:
     for i in 0..<len:
       fromData(data, pos, output[i])

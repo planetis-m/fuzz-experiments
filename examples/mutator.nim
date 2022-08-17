@@ -128,7 +128,7 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
 
 import hashes, tables
 
-proc mostCommonHashes(freqs: CountTable[Hash]): (seq[Hash], int) =
+proc mostCommonHashes*(freqs: CountTable[Hash]): (seq[Hash], int) =
   var values: seq[int]
   for value in values(freqs):
     values.add(value)
@@ -138,6 +138,18 @@ proc mostCommonHashes(freqs: CountTable[Hash]): (seq[Hash], int) =
     if value == best:
       words.add(key)
   (words, best)
+
+proc hashesOften*(freqs: var CountTable[Hash]; minTimes: int): OrderedTable[
+    seq[Hash], int] =
+  var done = false
+  while not done:
+    let (words, best) = mostCommonHashes(freqs)
+    if best >= minTimes:
+      result[words] = best
+      for word in words:
+        freqs.del(word)
+    else:
+      done = true
 
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
@@ -168,6 +180,9 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     inc step
     if step.isPowerOfTwo:
       echo "Step: ", step, " ", mostCommonHashes(duplicates)
+      if step == 8388608:
+        echo duplicates.hashesOften(10)
+        quit()
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =

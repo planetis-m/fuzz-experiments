@@ -15,6 +15,11 @@ const
   RandomToDefaultRatio* = 100
   DefaultMutateWeight* = 1000000
 
+var
+  interesting = false
+  step = 0
+  defaultV = false
+
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
 proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand)
@@ -54,6 +59,7 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
     let index = rand(r, result.len)
     result.insert(newInput(), index)
   # There is a chance we delete and then insert the same item.
+  if interesting: echo step, " selected: ", result
   if result != value:
     return result
   if result.len == 0:
@@ -103,6 +109,7 @@ proc mutateObj*[T: object](value: var T; sizeIncreaseHint: int;
   var s: Sampler[int]
   sample(value, 0, s, r, res)
   res = s.selected
+  #if interesting: echo step, " selected: ", res
   pick(value, 0, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
@@ -123,6 +130,9 @@ proc mutate*[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
 proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
     reset(value)
+    if interesting:
+      defaultV = true
+      #echo step, " here ", value
     return
   mutateObj(value, sizeIncreaseHint, r)
 
@@ -159,10 +169,13 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =
     var r = initRand(seed)
+    inc step
     var x: T
     if len > 1:
       x = move input(x, toOpenArray(data, 0, len-1))
     let tmp = x
+    if hash(toOpenArray(data, 0, len-1)) == 2471414957.Hash:
+      interesting = true
     mutate(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:
@@ -172,9 +185,12 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       assert pos == result
       copyMem(data, addr buffer[0], result)
       if hash(toOpenArray(data, 0, len-1)) == 2471414957.Hash:
-        if tmp != x:
-          echo "Before: ", tmp, " After: ", x
+        if not defaultV:
+          echo step, " Before: ", tmp, " After: ", x
       cached = move x
     else:
       setLen(buffer, 1)
       result = len
+    interesting = false
+    defaultV = false
+

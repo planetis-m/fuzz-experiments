@@ -107,7 +107,7 @@ proc mutateObj*[T: object](value: var T; sizeIncreaseHint: int;
 
 template repeatMutate*(call: untyped) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
-    #reset(value)
+    reset(value)
     return
   var tmp = value
   for i in 1..10:
@@ -129,13 +129,10 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-  import math, hashes
 
   var
     buffer: seq[byte] = @[0xf1'u8]
     cached: T
-    step = 0
-    count = 0
 
   proc input(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
     if equals(data, buffer):
@@ -153,13 +150,10 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     result = 0
     var x: T
     if len > 1: # ignore '\n' passed by LibFuzzer.
-      if hash(toOpenArray(data, 0, len-1)) == 2471414957.Hash: inc count
       try:
         target(input(x, toOpenArray(data, 0, len-1)))
       except:
         quitWithMsg()
-      inc step
-      if step.isPowerOfTwo: echo "Empty: ", count
 
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =

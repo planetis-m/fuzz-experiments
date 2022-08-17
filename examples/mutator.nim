@@ -158,8 +158,6 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   var
     buffer: seq[byte] = @[0xf1'u8]
     cached: T
-    duplicates = initCountTable[Hash](3_000_000)
-    step = 0
 
   proc input(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
     if equals(data, buffer):
@@ -174,17 +172,20 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
 
   proc incDuplicates(data: openArray[byte]) {.nosan, nocov.} =
     # 2471414957 is an empty object! Number of duplicates 597516
-    duplicates.inc hash(data)
-
-  proc writeStats() {.nosan, nocov.} =
-    inc step
-    if step.isPowerOfTwo:
-      echo "Step: ", step, " ", mostCommonHashes(duplicates)
-      if step == 4194304:
-        try:
-          writeFile "duplicates.txt", $duplicates
-        except: discard
-        quit()
+    var x: T
+    let t = hash(data)
+    case t
+    of Hash 2471414957: echo(t, ", ", input(x, data))
+    of Hash 1482484010: echo(t, ", ", input(x, data))
+    of Hash 334650560:  echo(t, ", ", input(x, data))
+    of Hash 3501136755: echo(t, ", ", input(x, data))
+    of Hash 2695030238: echo(t, ", ", input(x, data))
+    of Hash 3786301041: echo(t, ", ", input(x, data))
+    of Hash 1187495338: echo(t, ", ", input(x, data))
+    of Hash 627269100:  echo(t, ", ", input(x, data))
+    of Hash 1957639542: echo(t, ", ", input(x, data))
+    of Hash 1242738241: echo(t, ", ", input(x, data))
+    else: discard
 
   proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
       exportc: "LLVMFuzzerTestOneInput", raises: [].} =
@@ -196,7 +197,6 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
         target(input(x, toOpenArray(data, 0, len-1)))
       except:
         quitWithMsg()
-      writeStats()
 
   proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc: "LLVMFuzzerCustomMutator", nosan.} =

@@ -50,6 +50,7 @@ when defined(runFuzzTests) and isMainModule:
   import std/random, mutator, common
 
   {.experimental: "strictFuncs".}
+  {.experimental: "views".}
 
   proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)

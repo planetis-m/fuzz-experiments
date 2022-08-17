@@ -132,11 +132,11 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
 
   var
     buffer: seq[byte] = @[0xf1'u8]
-    cache: T
+    cached: T
 
-  proc withInput(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
+  proc input(data: openArray[byte]; x: var T): lent T {.nocov, nosan.} =
     if equals(data, buffer):
-      result = cache
+      result = cached
     else:
       var pos = 1
       fromData(data, pos, x)
@@ -151,7 +151,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     if len > 1: # ignore '\n' passed by LibFuzzer.
       var x: T
       try:
-        target(withInput(x, toOpenArray(data, 0, len-1)))
+        target(input(toOpenArray(data, 0, len-1), x))
       except:
         quitWithMsg()
 
@@ -170,7 +170,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       exportc: "LLVMFuzzerCustomMutator", nosan.} =
     var r = initRand(seed)
     if equals(toOpenArray(data, 0, len-1), buffer):
-      if not mutatorImpl(cache, data, maxLen, r, result):
+      if not mutatorImpl(cached, data, maxLen, r, result):
         result = len
     else:
       var y: T
@@ -178,5 +178,5 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
         var pos = 1
         fromData(toOpenArray(data, 0, len-1), pos, y)
       if mutatorImpl(y, data, maxLen, r, result):
-        cache = move y
+        cached = move y
       else: result = len

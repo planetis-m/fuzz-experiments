@@ -1,4 +1,4 @@
-# -seed=562773247
+# -seed=2676125676
 when defined(runFuzzTests):
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
@@ -87,7 +87,7 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[5].edges.len == 0 and
         x.nodes[6].edges.len == 0 and
         x.nodes[7].edges.len == 0:
-      assert false
+      doAssert false
 
   defaultMutator(fuzzTarget)
 

@@ -1,7 +1,7 @@
 # These objects seem to persistently be the most duplicated among runs!
 # Trace how these values are created to understand how mutators should be improved.
 # This is caused by the mutator dictionary skrewing us, unfortunately duplicate inputs are not rejected.
-# I don't think something can be done about our seq mutator given that it is limited to 2 edges per node.
+# I don't think something can be done about our seq mutator given that it is limited to 2 edges per node in this example.
 
 (key: 2471414957, val: 340634),
 (key: 1482484010, val: 34020),

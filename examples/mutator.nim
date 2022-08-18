@@ -126,7 +126,7 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
-proc defMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
+proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   mixin mutate
   mutate(x, sizeIncreaseHint, r)
 
@@ -148,13 +148,13 @@ proc testOneInputImpl[T](x: var T; data: openArray[byte];
 proc customMutatorImpl[T](x: var T; data: openArray[byte];
     mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand) {.nimcall.};
     maxLen: int; r: var Rand): int {.nosan.} =
-  mixin getInput, setOutput, clearBuffer
+  mixin getInput, setInput, clearBuffer
   if data.len > 1:
     x = move getInput(x, data)
   mutator(x, maxLen-x.byteSize, r)
   result = x.byteSize+1 # +1 for the skipped byte
   if result <= maxLen:
-    setOutput(x, data, result)
+    setInput(x, data, result)
   else:
     clearBuffer()
     result = data.len
@@ -175,7 +175,7 @@ template mutatorImpl(target, mutator, typ: untyped) =
       fromData(data, pos, x)
       result = x
 
-  proc setOutput(x: var typ; data: openArray[byte]; len: int) {.inline.} =
+  proc setInput(x: var typ; data: openArray[byte]; len: int) {.inline.} =
     setLen(buffer, len)
     var pos = 1
     toData(buffer, pos, x)
@@ -204,7 +204,7 @@ proc mutatorInner(fuzzTarget, mutator: NimNode): NimNode =
   result = newStmtList(getAst(mutatorImpl(fuzzTarget, mutator, typ)))
 
 macro defaultMutator*(fuzzTarget: proc) =
-  mutatorInner(fuzzTarget, bindSym"defMutator")
+  mutatorInner(fuzzTarget, bindSym"myMutator")
 
 macro customMutator*(fuzzTarget, mutator: proc) =
   mutatorInner(fuzzTarget, mutator)

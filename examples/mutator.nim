@@ -126,6 +126,33 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
+{.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
+{.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
+
+proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
+  quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
+
+proc testOneInput[T](x: var T; data: openArray[byte]; target: proc (x: T) {.
+    nimcall, noSideEffect.}) {.raises: [].} =
+  mixin getInput
+  if data.len > 1: # ignore '\n' passed by LibFuzzer.
+    try:
+      target(getInput(x, data))
+    except:
+      quitWithMsg()
+
+proc customMutator[T](x: var T; data: openArray[byte]; maxLen: int; r: var Rand): int {.nosan.} =
+  mixin getInput, setOutput, clearBuffer
+  if data.len > 1:
+    x = move getInput(x, data)
+  mutate(x, maxLen-x.byteSize, r)
+  result = x.byteSize+1 # +1 for the skipped byte
+  if result <= maxLen:
+    setOutput(x, data, result)
+  else:
+    clearBuffer()
+    result = data.len
+
 template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
@@ -134,7 +161,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
     buffer: seq[byte] = @[0xf1'u8]
     cached: T
 
-  proc input(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
+  proc getInput(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
     if equals(data, buffer):
       result = cached
     else:
@@ -142,34 +169,24 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       fromData(data, pos, x)
       result = x
 
-  proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
-    quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
+  proc setOutput(x: var T; data: openArray[byte]; len: int) =
+    setLen(buffer, len)
+    var pos = 1
+    toData(buffer, pos, x)
+    assert pos == len
+    copyMem(addr data, addr buffer[0], len)
+    cached = move x
 
-  proc testOneInput(data: ptr UncheckedArray[byte], len: int): cint {.
-      exportc: "LLVMFuzzerTestOneInput", raises: [].} =
+  proc clearBuffer() =
+    setLen(buffer, 1)
+
+  proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
     result = 0
     var x: T
-    if len > 1: # ignore '\n' passed by LibFuzzer.
-      try:
-        target(input(x, toOpenArray(data, 0, len-1)))
-      except:
-        quitWithMsg()
+    testOneInput(x, toOpenArray(data, 0, len-1), target)
 
-  proc customMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
-      exportc: "LLVMFuzzerCustomMutator", nosan.} =
+  proc LLVMFuzzerCustomMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
+      exportc.} =
     var r = initRand(seed)
     var x: T
-    if len > 1:
-      x = move input(x, toOpenArray(data, 0, len-1))
-    mutate(x, maxLen-x.byteSize, r)
-    result = x.byteSize+1 # +1 for the skipped byte
-    if result <= maxLen:
-      setLen(buffer, result)
-      var pos = 1
-      toData(buffer, pos, x)
-      assert pos == result
-      copyMem(data, addr buffer[0], result)
-      cached = move x
-    else:
-      setLen(buffer, 1)
-      result = len
+    customMutator(x, toOpenArray(data, 0, len-1), maxLen, r)

@@ -10,7 +10,6 @@ when defined(runFuzzTests):
   type
     NodeIdx = distinct int
 
-  proc `$`(x: NodeIdx): string {.borrow.}
   proc hash(x: NodeIdx): Hash {.borrow.}
   proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:

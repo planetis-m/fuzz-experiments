@@ -15,9 +15,9 @@ const
   RandomToDefaultRatio* = 100
   DefaultMutateWeight* = 1000000
 
-proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand)
-proc mutate*[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand)
-proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand)
+proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand)
+proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; r: var Rand)
+proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand)
 
 proc flipBit*(bytes: ptr UncheckedArray[byte]; len: int; r: var Rand) =
   # Flips random bit in the buffer.
@@ -114,13 +114,13 @@ template repeatMutate*(call: untyped) =
     value = call
     if value != tmp: return
 
-proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
+proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateValue(value, r))
 
-proc mutate*[T](value: var seq[T]; sizeIncreaseHint: Natural; r: var Rand) =
+proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
-proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
+proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
     reset(value)
     return

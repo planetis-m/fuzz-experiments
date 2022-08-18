@@ -54,13 +54,13 @@ when defined(runFuzzTests) and isMainModule:
 
   {.experimental: "strictFuncs".}
 
-  proc mutate(value: var NodeIdx; sizeIncreaseHint: Natural; r: var Rand) =
+  proc mutate(value: var NodeIdx; sizeIncreaseHint: int; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
-  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: Natural; r: var Rand) =
+  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: int; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: Natural; r: var Rand) =
+  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: int; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
   func fuzzTarget(x: Graph[int8]) =

@@ -132,8 +132,8 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: Natural; r: var Rand) =
 proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
   quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
 
-proc testOneInput[T](x: var T; data: openArray[byte]; target: proc (x: T) {.
-    nimcall, noSideEffect.}) {.raises: [].} =
+proc testOneInputImpl[T](x: var T; data: openArray[byte];
+    target: proc (x: T) {.nimcall, noSideEffect.}) {.raises: [].} =
   mixin getInput
   if data.len > 1: # ignore '\n' passed by LibFuzzer.
     try:
@@ -141,8 +141,9 @@ proc testOneInput[T](x: var T; data: openArray[byte]; target: proc (x: T) {.
     except:
       quitWithMsg()
 
-proc customMutator[T](x: var T; data: openArray[byte]; mutator: proc (x: var T; sizeIncreaseHint: int, r: var Rand) {.
-    nimcall, noSideEffect.}; maxLen: int; r: var Rand): int {.nosan.} =
+proc customMutatorImpl[T](x: var T; data: openArray[byte];
+    mutator: proc (x: var T; sizeIncreaseHint: int, r: var Rand) {.nimcall.};
+    maxLen: int; r: var Rand): int {.nosan.} =
   mixin getInput, setOutput, clearBuffer
   if data.len > 1:
     x = move getInput(x, data)
@@ -184,19 +185,19 @@ template mutatorImpl(target, mutator, typ: untyped) =
   proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
     result = 0
     var x: typ
-    testOneInput(x, toOpenArray(data, 0, len-1), target)
+    testOneInputImpl(x, toOpenArray(data, 0, len-1), target)
 
   proc LLVMFuzzerCustomMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc.} =
     var r = initRand(seed)
     var x: typ
-    customMutator(x, toOpenArray(data, 0, len-1), mutator, maxLen, r)
+    customMutatorImpl(x, toOpenArray(data, 0, len-1), mutator, maxLen, r)
 
 macro defaultMutator*(fuzzTarget: proc) =
   let tImpl = getTypeImpl(fuzzTarget)
   let param = tImpl.params[^1]
   let typ = param[1]
-  result = newStmtList(getAst(mutatorImpl(fuzzTarget, bindSym"mutate", typ)))
+  result = newStmtList(getAst(mutatorImpl(fuzzTarget, newTree(nnkBracketExpr, ident"mutate", typ), typ)))
 
 macro customMutator*(fuzzTarget, mutator: proc) =
   let tImpl = getTypeImpl(fuzzTarget)

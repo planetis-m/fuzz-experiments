@@ -92,7 +92,7 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[7].edges.len == 0:
       doAssert false
 
-  defaultMutator(fuzzTarget)
+  customMutator(fuzzTarget, mutate)
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

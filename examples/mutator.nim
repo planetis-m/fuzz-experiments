@@ -1,4 +1,4 @@
-import std/random, common, sampler
+import std/random, common, sampler, macros
 from typetraits import distinctBase
 
 proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -153,15 +153,15 @@ proc customMutator[T](x: var T; data: openArray[byte]; maxLen: int; r: var Rand)
     clearBuffer()
     result = data.len
 
-template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
+template defaultMutatorImpl(target, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
   var
     buffer: seq[byte] = @[0xf1'u8]
-    cached: T
+    cached: typ
 
-  proc getInput(x: var T; data: openArray[byte]): var T {.nocov, nosan.} =
+  proc getInput(x: var typ; data: openArray[byte]): var typ {.nocov, nosan.} =
     if equals(data, buffer):
       result = cached
     else:
@@ -169,7 +169,7 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
       fromData(data, pos, x)
       result = x
 
-  proc setOutput(x: var T; data: openArray[byte]; len: int) =
+  proc setOutput(x: var typ; data: openArray[byte]; len: int) =
     setLen(buffer, len)
     var pos = 1
     toData(buffer, pos, x)
@@ -182,11 +182,17 @@ template defaultMutator*[T](target: proc (x: T) {.nimcall, noSideEffect.}) =
 
   proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
     result = 0
-    var x: T
+    var x: typ
     testOneInput(x, toOpenArray(data, 0, len-1), target)
 
   proc LLVMFuzzerCustomMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc.} =
     var r = initRand(seed)
-    var x: T
+    var x: typ
     customMutator(x, toOpenArray(data, 0, len-1), maxLen, r)
+
+macro defaultMutator*(fuzzTarget: proc) =
+  let tImpl = getTypeImpl(fuzzTarget)
+  let param = tImpl.params[^1]
+  let typ = param[1]
+  result = newStmtList(getAst(defaultMutatorImpl(fuzzTarget, typ)))

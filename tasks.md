@@ -56,6 +56,7 @@ TODO
 - [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Write some docs and a ref example.
+- [ ] Add the post-processing step.
 
 MAYBE
 =====

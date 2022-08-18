@@ -137,7 +137,7 @@ proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
   quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
 
 proc testOneInputImpl[T](x: var T; data: openArray[byte];
-    target: proc (x: T) {.nimcall, noSideEffect.}) {.raises: [].} =
+    target: proc (x: T) {.nimcall, noSideEffect.}) {.inline, raises: [].} =
   mixin getInput
   if data.len > 1: # ignore '\n' passed by LibFuzzer.
     try:
@@ -147,7 +147,7 @@ proc testOneInputImpl[T](x: var T; data: openArray[byte];
 
 proc customMutatorImpl[T](x: var T; data: openArray[byte];
     mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand) {.nimcall.};
-    maxLen: int; r: var Rand): int {.nosan.} =
+    maxLen: int; r: var Rand): int {.inline, nosan.} =
   mixin getInput, setInput, clearBuffer
   if data.len > 1:
     x = move getInput(x, data)

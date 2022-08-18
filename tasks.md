@@ -45,6 +45,7 @@ DONE after 4/8
 - [X] testOneInput parameter should be immutable, also cut more time. (2.0h) 16/8
 - [X] Cleanup new code. (2h) 16/8-17/8
 - [X] Step through example mutator and gain knowledge of how it works and how it can be improved. (3.0h) 17/8
+- [X] Split into procs, convert into macro, and write customMutator. (1.0h) 18/8
 
 TODO
 ====

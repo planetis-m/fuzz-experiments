@@ -126,6 +126,10 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
+proc defMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
+  mixin mutate
+  mutate(x, sizeIncreaseHint, r)
+
 {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
 {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
@@ -193,14 +197,14 @@ template mutatorImpl(target, mutator, typ: untyped) =
     var x: typ
     customMutatorImpl(x, toOpenArray(data, 0, len-1), mutator, maxLen, r)
 
-macro defaultMutator*(fuzzTarget: proc) =
-  let tImpl = getTypeImpl(fuzzTarget)
-  let param = tImpl.params[^1]
-  let typ = param[1]
-  result = newStmtList(getAst(mutatorImpl(fuzzTarget, bindSym("mutate", brForceOpen), typ)))
-
-macro customMutator*(fuzzTarget, mutator: proc) =
+proc mutatorInner(fuzzTarget, mutator: NimNode): NimNode =
   let tImpl = getTypeImpl(fuzzTarget)
   let param = tImpl.params[^1]
   let typ = param[1]
   result = newStmtList(getAst(mutatorImpl(fuzzTarget, mutator, typ)))
+
+macro defaultMutator*(fuzzTarget: proc) =
+  mutatorInner(fuzzTarget, bindSym"defMutator")
+
+macro customMutator*(fuzzTarget, mutator: proc) =
+  mutatorInner(fuzzTarget, mutator)

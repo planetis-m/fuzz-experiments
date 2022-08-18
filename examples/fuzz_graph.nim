@@ -92,7 +92,10 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[7].edges.len == 0:
       doAssert false
 
-  customMutator(fuzzTarget, mutate)
+  proc myMutator(value: var Graph[int8]; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
+    mutate(value, sizeIncreaseHint, r)
+
+  customMutator(fuzzTarget, myMutator)
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

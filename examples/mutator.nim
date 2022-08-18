@@ -142,7 +142,7 @@ proc testOneInputImpl[T](x: var T; data: openArray[byte];
       quitWithMsg()
 
 proc customMutatorImpl[T](x: var T; data: openArray[byte];
-    mutator: proc (x: var T; sizeIncreaseHint: int, r: var Rand) {.nimcall.};
+    mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand) {.nimcall.};
     maxLen: int; r: var Rand): int {.nosan.} =
   mixin getInput, setOutput, clearBuffer
   if data.len > 1:
@@ -197,7 +197,7 @@ macro defaultMutator*(fuzzTarget: proc) =
   let tImpl = getTypeImpl(fuzzTarget)
   let param = tImpl.params[^1]
   let typ = param[1]
-  result = newStmtList(getAst(mutatorImpl(fuzzTarget, newTree(nnkBracketExpr, ident"mutate", typ), typ)))
+  result = newStmtList(getAst(mutatorImpl(fuzzTarget, bindSym("mutate", brForceOpen), typ)))
 
 macro customMutator*(fuzzTarget, mutator: proc) =
   let tImpl = getTypeImpl(fuzzTarget)

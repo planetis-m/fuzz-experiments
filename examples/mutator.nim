@@ -141,11 +141,12 @@ proc testOneInput[T](x: var T; data: openArray[byte]; target: proc (x: T) {.
     except:
       quitWithMsg()
 
-proc customMutator[T](x: var T; data: openArray[byte]; maxLen: int; r: var Rand): int {.nosan.} =
+proc customMutator[T](x: var T; data: openArray[byte]; mutator: proc (x: var T; sizeIncreaseHint: int, r: var Rand) {.
+    nimcall, noSideEffect.}; maxLen: int; r: var Rand): int {.nosan.} =
   mixin getInput, setOutput, clearBuffer
   if data.len > 1:
     x = move getInput(x, data)
-  mutate(x, maxLen-x.byteSize, r)
+  mutator(x, maxLen-x.byteSize, r)
   result = x.byteSize+1 # +1 for the skipped byte
   if result <= maxLen:
     setOutput(x, data, result)
@@ -153,7 +154,7 @@ proc customMutator[T](x: var T; data: openArray[byte]; maxLen: int; r: var Rand)
     clearBuffer()
     result = data.len
 
-template defaultMutatorImpl(target, typ: untyped) =
+template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
@@ -169,7 +170,7 @@ template defaultMutatorImpl(target, typ: untyped) =
       fromData(data, pos, x)
       result = x
 
-  proc setOutput(x: var typ; data: openArray[byte]; len: int) =
+  proc setOutput(x: var typ; data: openArray[byte]; len: int) {.inline.} =
     setLen(buffer, len)
     var pos = 1
     toData(buffer, pos, x)
@@ -177,7 +178,7 @@ template defaultMutatorImpl(target, typ: untyped) =
     copyMem(addr data, addr buffer[0], len)
     cached = move x
 
-  proc clearBuffer() =
+  proc clearBuffer() {.inline.} =
     setLen(buffer, 1)
 
   proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
@@ -189,10 +190,16 @@ template defaultMutatorImpl(target, typ: untyped) =
       exportc.} =
     var r = initRand(seed)
     var x: typ
-    customMutator(x, toOpenArray(data, 0, len-1), maxLen, r)
+    customMutator(x, toOpenArray(data, 0, len-1), mutator, maxLen, r)
 
 macro defaultMutator*(fuzzTarget: proc) =
   let tImpl = getTypeImpl(fuzzTarget)
   let param = tImpl.params[^1]
   let typ = param[1]
-  result = newStmtList(getAst(defaultMutatorImpl(fuzzTarget, typ)))
+  result = newStmtList(getAst(mutatorImpl(fuzzTarget, bindSym"mutate", typ)))
+
+macro customMutator*(fuzzTarget, mutator: proc) =
+  let tImpl = getTypeImpl(fuzzTarget)
+  let param = tImpl.params[^1]
+  let typ = param[1]
+  result = newStmtList(getAst(mutatorImpl(fuzzTarget, mutator, typ)))

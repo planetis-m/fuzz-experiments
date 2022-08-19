@@ -66,13 +66,15 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
 proc sample*[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
   sample(x.distinctBase, depth, s, r, res)
 
-proc sample*[T: SomeNumber](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+template sampleTest*(call: untyped) =
   inc res
-  test(s, r, DefaultMutateWeight, res)
+  call
+
+proc sample*[T: SomeNumber](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+  sampleTest(test(s, r, DefaultMutateWeight, res))
 
 proc sample*[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int) =
-  inc res
-  test(s, r, DefaultMutateWeight, res)
+  sampleTest(test(s, r, DefaultMutateWeight, res))
 
 proc sample*[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
   for v in fields(x):
@@ -81,7 +83,7 @@ proc sample*[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var 
 proc pick*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
   pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
 
-template pickMutate(call: untyped) =
+template pickMutate*(call: untyped) =
   if res > 0:
     dec res
     if res == 0:

@@ -1,5 +1,4 @@
-# -seed=2676125676 good
-# -seed=2080551719 bad
+# -seed=1172144200
 when defined(runFuzzTests):
   import std/hashes
 
@@ -92,7 +91,19 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[7].edges.len == 0:
       doAssert false
 
-  defaultMutator(fuzzTarget)
+  proc fuzzMutator(x: var Graph[int8]; sizeIncreaseHint: Natural; r: var Rand) =
+    mutate(x, sizeIncreaseHint, r)
+    if x.nodes.len >= 8:
+      x.nodes[0].data = 63
+      x.nodes[1].data = 3
+      x.nodes[2].data = -56
+      x.nodes[3].data = 100
+      x.nodes[4].data = -100
+      x.nodes[5].data = -78
+      x.nodes[6].data = 46
+      x.nodes[7].data = 120
+
+  customMutator(fuzzTarget, fuzzMutator)
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

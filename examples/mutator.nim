@@ -134,14 +134,13 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
-  when not supportsCopyMem(T):  # This is crap
-    if depth < 0:
-      reset(x)
-      return
-  when compiles(postProcess(x, r)):
-    postProcess(x, r)
+  if depth < 0:
+    when not supportsCopyMem(T): reset(x)
   else:
-    runPostProcessor(x.distinctBase, depth-1, r)
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+    else:
+      runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
   when compiles(postProcess(x, r)):
@@ -159,7 +158,7 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
 
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   if depth < 0:
-    reset(x)
+    when not supportsCopyMem(T): reset(x)
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)

@@ -130,42 +130,20 @@ proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} 
   mixin mutate
   mutate(x, sizeIncreaseHint, r)
 
-{.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
-{.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
-
-proc quitWithMsg() {.noinline, noreturn, nosan, nocov.} =
-  quit("Fuzzer quited with unhandled exception: " & getCurrentExceptionMsg())
-
-proc testOneInputImpl[T](x: var T; data: openArray[byte];
-    target: proc (x: T) {.nimcall, noSideEffect.}) {.inline, raises: [].} =
-  mixin getInput
-  if data.len > 1: # ignore '\n' passed by LibFuzzer.
-    try:
-      target(getInput(x, data))
-    except:
-      quitWithMsg()
-
-proc customMutatorImpl[T](x: var T; data: openArray[byte]; maxLen: int;
-    mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand) {.nimcall.};
-    r: var Rand): int {.inline, nosan.} =
-  mixin getInput, setInput, clearBuffer
-  if data.len > 1:
-    x = move getInput(x, data)
-  mutator(x, maxLen-x.byteSize, r)
-  result = x.byteSize+1 # +1 for the skipped byte
-  if result <= maxLen:
-    setInput(x, data, result)
-  else:
-    clearBuffer()
-    result = data.len
-
 template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
   {.pragma: nosan, codegenDecl: "__attribute__((disable_sanitizer_instrumentation)) $# $#$#".}
 
+  type
+    FuzzTarget = proc (x: typ) {.nimcall, noSideEffect.}
+    FuzzMutator = proc (x: var typ; sizeIncreaseHint: Natural, r: var Rand) {.nimcall, noSideEffect.}
+
   var
     buffer: seq[byte] = @[0xf1'u8]
     cached: typ
+
+  proc raiseAsDefect(exc: ref Exception, msg: string) {.noreturn, noinline, nosan, nocov.} =
+    raise (ref Defect)(msg: msg & "\n" & exc.msg & "\n" & exc.getStackTrace(), parent: exc)
 
   proc getInput(x: var typ; data: openArray[byte]): var typ {.nocov, nosan.} =
     if equals(data, buffer):
@@ -186,23 +164,41 @@ template mutatorImpl(target, mutator, typ: untyped) =
   proc clearBuffer() {.inline.} =
     setLen(buffer, 1)
 
+  proc testOneInputImpl[T](x: var T; data: openArray[byte]) {.inline, raises: [].} =
+    if data.len > 1: # ignore '\n' passed by LibFuzzer.
+      try:
+        FuzzTarget(target)(getInput(x, data))
+      except:
+        raiseAsDefect(getCurrentException(), "Fuzzer quited with unhandled exception.")
+
   proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
     result = 0
     var x: typ
-    testOneInputImpl(x, toOpenArray(data, 0, len-1), target)
+    testOneInputImpl(x, toOpenArray(data, 0, len-1))
+
+  proc customMutatorImpl(x: var typ; data: openArray[byte]; maxLen: int; r: var Rand): int {.inline, nosan.} =
+    if data.len > 1:
+      x = move getInput(x, data)
+    FuzzMutator(mutator)(x, maxLen-x.byteSize, r)
+    result = x.byteSize+1 # +1 for the skipped byte
+    if result <= maxLen:
+      setInput(x, data, result)
+    else:
+      clearBuffer()
+      result = data.len
 
   proc LLVMFuzzerCustomMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc.} =
     var r = initRand(seed)
     var x: typ
-    customMutatorImpl(x, toOpenArray(data, 0, len-1), maxLen, mutator, r)
+    customMutatorImpl(x, toOpenArray(data, 0, len-1), maxLen, r)
 
-proc commonImpl(fuzzTarget, mutator: NimNode): NimNode =
-  let typ = getTypeImpl(fuzzTarget).params[^1][1]
-  result = newStmtList(getAst(mutatorImpl(fuzzTarget, mutator, typ)))
+proc commonImpl(target, mutator: NimNode): NimNode =
+  let typ = getTypeImpl(target).params[^1][1]
+  result = newStmtList(getAst(mutatorImpl(target, mutator, typ)))
 
-macro defaultMutator*(fuzzTarget: proc) =
-  commonImpl(fuzzTarget, bindSym"myMutator")
+macro defaultMutator*(target: proc) =
+  commonImpl(target, bindSym"myMutator")
 
-macro customMutator*(fuzzTarget, mutator: proc) =
-  commonImpl(fuzzTarget, mutator)
+macro customMutator*(target, mutator: proc) =
+  commonImpl(target, mutator)

@@ -93,7 +93,7 @@ when defined(runFuzzTests) and isMainModule:
 
   proc fuzzMutator(x: var Graph[int8]; sizeIncreaseHint: Natural; r: var Rand) =
     mutate(x, sizeIncreaseHint, r)
-    if x.nodes.len >= 8:
+    if x.nodes.len >= 8: # Post-processing
       x.nodes[0].data = 63
       x.nodes[1].data = 3
       x.nodes[2].data = -56

@@ -136,7 +136,7 @@ template mutatorImpl(target, mutator, typ: untyped) =
 
   type
     FuzzTarget = proc (x: typ) {.nimcall, noSideEffect.}
-    FuzzMutator = proc (x: var typ; sizeIncreaseHint: Natural, r: var Rand) {.nimcall, noSideEffect.}
+    FuzzMutator = proc (x: var typ; sizeIncreaseHint: Natural, r: var Rand) {.nimcall.}
 
   var
     buffer: seq[byte] = @[0xf1'u8]
@@ -169,7 +169,7 @@ template mutatorImpl(target, mutator, typ: untyped) =
       try:
         FuzzTarget(target)(getInput(x, data))
       except:
-        raiseAsDefect(getCurrentException(), "Fuzzer quited with unhandled exception.")
+        raiseAsDefect(getCurrentException(), "Fuzzer caught unhandled exception.")
 
   proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
     result = 0

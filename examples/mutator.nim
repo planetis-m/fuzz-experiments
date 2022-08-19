@@ -143,11 +143,11 @@ proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
     postProcess(x, r)
 
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    postProcess(x, r)
+  if depth < 0:
+    reset(x)
   else:
-    if depth < 0:
-      reset(x)
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
     else:
       for i in 0..<x.len:
         runPostProcessor(x[i], depth-1, r)

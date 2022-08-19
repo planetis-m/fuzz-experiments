@@ -1,5 +1,5 @@
 import std/random, common, sampler, macros
-from typetraits import distinctBase
+from typetraits import distinctBase, supportsCopyMem
 
 proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
   {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
@@ -134,13 +134,14 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
-  if depth < 0:
-    reset(x)
+  when not supportsCopyMem(T):  # This is crap
+    if depth < 0:
+      reset(x)
+      return
+  when compiles(postProcess(x, r)):
+    postProcess(x, r)
   else:
-    when compiles(postProcess(x, r)):
-      postProcess(x, r)
-    else:
-      runPostProcessor(x.distinctBase, depth-1, r)
+    runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
   when compiles(postProcess(x, r)):

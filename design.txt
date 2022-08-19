@@ -113,7 +113,8 @@ fields iterator limitations.
 References
 ----------
 
-Limit recursion depth, another API addition (maxDepth)?
+Limit recursion depth, another API addition (maxDepth). Ignore the object field, if there
+is a .cursor pragma (doesn't work).
 
 Distincts
 ---------

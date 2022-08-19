@@ -53,7 +53,7 @@ TODO
 - [ ] See if hashing the seq and comparing with an old hash improves performance. (1.25h+) 14/8-
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
-- [ ] Safe enum mutator, needs a macro (try to reuse rank from enumutils). (1h)
+- [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Write some docs and a ref example.
 - [ ] Add the post-processing step.

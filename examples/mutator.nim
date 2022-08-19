@@ -145,9 +145,9 @@ proc testOneInputImpl[T](x: var T; data: openArray[byte];
     except:
       quitWithMsg()
 
-proc customMutatorImpl[T](x: var T; data: openArray[byte];
+proc customMutatorImpl[T](x: var T; data: openArray[byte]; maxLen: int;
     mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand) {.nimcall.};
-    maxLen: int; r: var Rand): int {.inline, nosan.} =
+    r: var Rand): int {.inline, nosan.} =
   mixin getInput, setInput, clearBuffer
   if data.len > 1:
     x = move getInput(x, data)
@@ -195,16 +195,14 @@ template mutatorImpl(target, mutator, typ: untyped) =
       exportc.} =
     var r = initRand(seed)
     var x: typ
-    customMutatorImpl(x, toOpenArray(data, 0, len-1), mutator, maxLen, r)
+    customMutatorImpl(x, toOpenArray(data, 0, len-1), maxLen, mutator, r)
 
-proc mutatorInner(fuzzTarget, mutator: NimNode): NimNode =
-  let tImpl = getTypeImpl(fuzzTarget)
-  let param = tImpl.params[^1]
-  let typ = param[1]
+proc commonImpl(fuzzTarget, mutator: NimNode): NimNode =
+  let typ = getTypeImpl(fuzzTarget).params[^1][1]
   result = newStmtList(getAst(mutatorImpl(fuzzTarget, mutator, typ)))
 
 macro defaultMutator*(fuzzTarget: proc) =
-  mutatorInner(fuzzTarget, bindSym"myMutator")
+  commonImpl(fuzzTarget, bindSym"myMutator")
 
 macro customMutator*(fuzzTarget, mutator: proc) =
-  mutatorInner(fuzzTarget, mutator)
+  commonImpl(fuzzTarget, mutator)

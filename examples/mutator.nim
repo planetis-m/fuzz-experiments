@@ -134,9 +134,13 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    postProcess(x, r)
-  else: runPostProcessor(x.distinctBase, depth, r)
+  if depth < 0:
+    reset(x)
+  else:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+    else:
+      runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
   when compiles(postProcess(x, r)):
@@ -153,11 +157,14 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
         runPostProcessor(x[i], depth-1, r)
 
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    postProcess(x, r)
+  if depth < 0:
+    reset(x)
   else:
-    for v in fields(x):
-      runPostProcessor(v, depth, r)
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+    else:
+      for v in fields(x):
+        runPostProcessor(v, depth-1, r)
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   mixin mutate, postProcess

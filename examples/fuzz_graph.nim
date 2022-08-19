@@ -91,19 +91,18 @@ when defined(runFuzzTests) and isMainModule:
         x.nodes[7].edges.len == 0:
       doAssert false
 
-  proc fuzzMutator(x: var Graph[int8]; sizeIncreaseHint: Natural; r: var Rand) =
-    mutate(x, sizeIncreaseHint, r)
-    if x.nodes.len >= 8: # Post-processing
-      x.nodes[0].data = 63
-      x.nodes[1].data = 3
-      x.nodes[2].data = -56
-      x.nodes[3].data = 100
-      x.nodes[4].data = -100
-      x.nodes[5].data = -78
-      x.nodes[6].data = 46
-      x.nodes[7].data = 120
+  proc postProcess[T](x: var seq[Node[T]]; r: var Rand) =
+    if x.len >= 8: # Post-processing
+      x[0].data = 63
+      x[1].data = 3
+      x[2].data = -56
+      x[3].data = 100
+      x[4].data = -100
+      x[5].data = -78
+      x[6].data = 46
+      x[7].data = 120
 
-  customMutator(fuzzTarget, fuzzMutator)
+  defaultMutator(fuzzTarget)
 
   #(nodes: @[
     #(data: 63, edges: @[1, 2]),

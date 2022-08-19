@@ -14,6 +14,7 @@ template `+!`(p: pointer, s: int): untyped =
 const
   RandomToDefaultRatio* = 100
   DefaultMutateWeight* = 1000000
+  MaxInitializeDepth* = 200
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand)
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; r: var Rand)
@@ -128,9 +129,40 @@ proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand) =
     return
   mutateObj(value, sizeIncreaseHint, r)
 
+proc runPost*[T: SomeNumber](x: var T, depth: int; r: var Rand)
+proc runPost*[T](x: var seq[T], depth: int; r: var Rand)
+proc runPost*[T: object](x: var T, depth: int; r: var Rand)
+
+proc runPost*[T: distinct](x: var T, depth: int; r: var Rand) =
+  when compiles(postProcess(x, r)):
+    postProcess(x, r)
+  else: runPost(x.distinctBase, depth, r)
+
+proc runPost*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
+  when compiles(postProcess(x, r)):
+    postProcess(x, r)
+
+proc runPost*[T](x: var seq[T], depth: int; r: var Rand) =
+  when compiles(postProcess(x, r)):
+    postProcess(x, r)
+  else:
+    if depth < 0:
+      reset(x)
+    else:
+      for i in 0..<x.len:
+        runPost(x[i], depth-1, r)
+
+proc runPost*[T: object](x: var T, depth: int; r: var Rand) =
+  when compiles(postProcess(x, r)):
+    postProcess(x, r)
+  else:
+    for v in fields(x):
+      runPost(v, depth, r)
+
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
-  mixin mutate
+  mixin mutate, postProcess
   mutate(x, sizeIncreaseHint, r)
+  runPost(x, MaxInitializeDepth, r)
 
 template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}

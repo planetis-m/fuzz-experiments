@@ -1,26 +1,27 @@
 # -seed=1172144200
-const
-  MaxNodes = 8 # User defined, statically limits number of nodes.
-  MaxEdges = 2 # Limits number of edges
-
 when defined(runFuzzTests):
-  import mutator, common
+  import std/hashes
+
+  const
+    MaxNodes = 8 # User defined, statically limits number of nodes.
+    MaxEdges = 2 # Limits number of edges
 
   type
-    NodeIdx = range[0..MaxNodes-1]
-else:
-  {.pragma: fuzzMax.}
+    NodeIdx = distinct int
 
+  proc hash(x: NodeIdx): Hash {.borrow.}
+  proc `==`(a, b: NodeIdx): bool {.borrow.}
+else:
   type
     NodeIdx = int
 
 type
   Graph*[T] = object
-    nodes {.fuzzMax: MaxNodes.}: seq[Node[T]]
+    nodes: seq[Node[T]]
 
   Node[T] = object
     data: T
-    edges {.fuzzMax: MaxEdges.}: seq[NodeIdx]
+    edges: seq[NodeIdx]
 
 proc `[]`*[T](x: Graph[T]; idx: Natural): lent T {.inline.} = x.nodes[idx].data
 proc `[]`*[T](x: var Graph[T]; idx: Natural): var T {.inline.} = x.nodes[idx].data
@@ -48,9 +49,18 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       #x.deleteNode(toNode.int) #sneaky bug?
 
 when defined(runFuzzTests) and isMainModule:
-  import std/random
+  import std/random, mutator, common
 
   {.experimental: "strictFuncs".}
+
+  proc mutate(value: var NodeIdx; sizeIncreaseHint: int; r: var Rand) =
+    repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
+
+  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: int; r: var Rand) =
+    repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
+
+  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: int; r: var Rand) =
+    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
   proc postProcess[T: SomeNumber](x: var seq[Node[T]]; r: var Rand) =
     if x.len >= 8:

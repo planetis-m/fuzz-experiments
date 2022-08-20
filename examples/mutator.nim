@@ -70,12 +70,15 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
     let index = rand(r, result.high)
     runMutator(result[index], sizeIncreaseHint, r)
 
-proc sample*[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
-  sample(x.distinctBase, depth, s, r, res)
-
 template sampleTest*(call: untyped) =
   inc res
   call
+
+proc sample*[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+  when compiles(mutate(x, 0, r)):
+    sampleTest(test(x, r, DefaultMutateWeight, res))
+  else:
+    sample(x.distinctBase, depth, s, r, res)
 
 proc sample*[T: SomeNumber](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
   sampleTest(test(s, r, DefaultMutateWeight, res))
@@ -90,14 +93,17 @@ proc sample*[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var 
     for v in fields(x):
       sample(v, depth, s, r, res)
 
-proc pick*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
-  pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
-
 template pickMutate*(call: untyped) =
   if res > 0:
     dec res
     if res == 0:
       call
+
+proc pick*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+  when compiles(mutate(x, sizeIncreaseHint, r)):
+    pickMutate(mutate(x, sizeIncreaseHint, r))
+  else:
+    pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
 
 proc pick*[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, r))
@@ -113,22 +119,32 @@ proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; 
       pick(v, depth, sizeIncreaseHint, r, res)
 
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; r: var Rand) =
-  when compiles(mutate(x, sizeIncreaseHint, r)): mutate(x, sizeIncreaseHint, r)
+  when compiles(mutate(x, sizeIncreaseHint, r)):
+    if rand(r, RandomToDefaultRatio - 1) == 0:
+      reset(x)
+    else:
+      mutate(x, sizeIncreaseHint, r)
   else: runMutator(x.distinctBase, sizeIncreaseHint, r)
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; r: var Rand) =
-  mutate(x, sizeIncreaseHint, r)
+  if rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(x)
+  else:
+    mutate(x, sizeIncreaseHint, r)
 
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; r: var Rand) =
-  mutate(x, sizeIncreaseHint, r)
+  if rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(x)
+  else:
+    mutate(x, sizeIncreaseHint, r)
 
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int;
     r: var Rand) =
-  when compiles(mutate(x, sizeIncreaseHint, r)):
-    mutate(x, sizeIncreaseHint, r)
+  if rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(x)
   else:
-    if rand(r, RandomToDefaultRatio - 1) == 0:
-      reset(x)
+    when compiles(mutate(x, sizeIncreaseHint, r)):
+      mutate(x, sizeIncreaseHint, r)
     else:
       var res = 0
       var s: Sampler[int]
@@ -137,13 +153,10 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int;
       pick(x, 0, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
-  if rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
-  else:
-    var tmp = value
-    for i in 1..10:
-      value = call
-      if value != tmp: return
+  var tmp = value
+  for i in 1..10:
+    value = call
+    if value != tmp: return
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateValue(value, r))

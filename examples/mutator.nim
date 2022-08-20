@@ -1,6 +1,9 @@
 import std/random, common, sampler, macros
 from typetraits import distinctBase, supportsCopyMem
 
+template fuzzMax*(len: Positive) {.pragma.}
+template fuzzIgnore* {.pragma.}
+
 when not defined(fuzzSa):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
@@ -108,20 +111,23 @@ proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; 
 
 proc mutateObj*[T: object](value: var T; sizeIncreaseHint: int;
     r: var Rand) =
-  var res = 0
-  var s: Sampler[int]
-  sample(value, 0, s, r, res)
-  res = s.selected
-  pick(value, 0, sizeIncreaseHint, r, res)
+  if rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(value)
+  else:
+    var res = 0
+    var s: Sampler[int]
+    sample(value, 0, s, r, res)
+    res = s.selected
+    pick(value, 0, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
     reset(value)
-    return
-  var tmp = value
-  for i in 1..10:
-    value = call
-    if value != tmp: return
+  else:
+    var tmp = value
+    for i in 1..10:
+      value = call
+      if value != tmp: return
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateValue(value, r))
@@ -130,9 +136,6 @@ proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
 proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand) =
-  if rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
-    return
   mutateObj(value, sizeIncreaseHint, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
@@ -190,9 +193,6 @@ template mutatorImpl(target, mutator, typ: untyped) =
     buffer: seq[byte] = @[0xf1'u8]
     cached: typ
 
-  proc raiseAsDefect(exc: ref Exception, msg: string) {.noreturn, noinline, nosan, nocov.} =
-    raise (ref Defect)(msg: msg & "\n" & exc.msg & "\n" & exc.getStackTrace(), parent: exc)
-
   proc getInput(x: var typ; data: openArray[byte]): var typ {.nocov, nosan.} =
     if equals(data, buffer):
       result = cached
@@ -212,19 +212,14 @@ template mutatorImpl(target, mutator, typ: untyped) =
   proc clearBuffer() {.inline.} =
     setLen(buffer, 1)
 
-  proc testOneInputImpl[T](x: var T; data: openArray[byte]) {.inline, raises: [].} =
+  proc testOneInputImpl[T](x: var T; data: openArray[byte]) {.raises: [].} =
     if data.len > 1: # ignore '\n' passed by LibFuzzer.
       try:
         FuzzTarget(target)(getInput(x, data))
-      except:
-        raiseAsDefect(getCurrentException(), "Fuzzer caught unhandled exception.")
+      finally:
+        {.emit: "nimTestErrorFlag();".}
 
-  proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
-    result = 0
-    var x: typ
-    testOneInputImpl(x, toOpenArray(data, 0, len-1))
-
-  proc customMutatorImpl(x: var typ; data: openArray[byte]; maxLen: int; r: var Rand): int {.inline, nosan.} =
+  proc customMutatorImpl(x: var typ; data: openArray[byte]; maxLen: int; r: var Rand): int {.nosan.} =
     if data.len > 1:
       x = move getInput(x, data)
     FuzzMutator(mutator)(x, maxLen-x.byteSize, r)
@@ -234,6 +229,11 @@ template mutatorImpl(target, mutator, typ: untyped) =
     else:
       clearBuffer()
       result = data.len
+
+  proc LLVMFuzzerTestOneInput(data: ptr UncheckedArray[byte], len: int): cint {.exportc.} =
+    result = 0
+    var x: typ
+    testOneInputImpl(x, toOpenArray(data, 0, len-1))
 
   proc LLVMFuzzerCustomMutator(data: ptr UncheckedArray[byte], len, maxLen: int, seed: int64): int {.
       exportc.} =

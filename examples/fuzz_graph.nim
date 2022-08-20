@@ -4,9 +4,13 @@ const
   MaxEdges = 2 # Limits number of edges
 
 when defined(runFuzzTests):
+  import mutator, common
+
   type
     NodeIdx = range[0..MaxNodes-1]
 else:
+  {.pragma: fuzzMax.}
+
   type
     NodeIdx = int
 
@@ -44,7 +48,7 @@ proc deleteEdge*[T](x: var Graph[T]; `from`, to: Natural) =
       #x.deleteNode(toNode.int) #sneaky bug?
 
 when defined(runFuzzTests) and isMainModule:
-  import std/random, mutator, common
+  import std/random
 
   {.experimental: "strictFuncs".}
 

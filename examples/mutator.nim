@@ -212,7 +212,7 @@ template mutatorImpl(target, mutator, typ: untyped) =
   proc clearBuffer() {.inline.} =
     setLen(buffer, 1)
 
-  proc testOneInputImpl[T](x: var T; data: openArray[byte]) {.raises: [].} =
+  proc testOneInputImpl[T](x: var T; data: openArray[byte]) =
     if data.len > 1: # ignore '\n' passed by LibFuzzer.
       try:
         FuzzTarget(target)(getInput(x, data))

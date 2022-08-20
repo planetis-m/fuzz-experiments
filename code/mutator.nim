@@ -117,10 +117,7 @@ proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; 
 
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, r)):
-    if rand(r, RandomToDefaultRatio - 1) == 0:
-      reset(x)
-    else:
-      mutate(x, sizeIncreaseHint, r)
+    mutate(x, sizeIncreaseHint, r)
   else:
     runMutator(x.distinctBase, sizeIncreaseHint, r)
 
@@ -152,10 +149,12 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int;
       pick(x, MaxInitializeDepth, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
+  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(x)
   var tmp = value
   for i in 1..10:
     value = call
-    if value != tmp: return
+    if not enforceChanges or value != tmp: return
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateValue(value, r))

@@ -48,7 +48,7 @@ DONE after 4/8
 - [X] Further split into procs, convert generic template into macro, and write experimental customMutator. (1.0h) 18/8
 - [X] Added a post-processor step and more cleanups. (2.0h) 19/8
 - [X] Need to refactor sampler/picker/mutator. (1h) 20/8
-- [X] Investigate how easy it would be to add a single custom pragma "userMax". Very hard actually, implementation wise, it would require a new parameter in the mutate/pick overloads, user needs to import the mutator from their library and add fake pragma for the normal case.
+- [X] Investigate how easy it would be to add a single custom pragma "userMax".
 
 TODO
 ====
@@ -58,6 +58,7 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
+- [ ] Small refactor to prevent creating so many default values.
 
 MAYBE
 =====

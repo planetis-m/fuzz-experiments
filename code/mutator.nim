@@ -1,9 +1,6 @@
 import std/random, common, sampler, macros
 from typetraits import distinctBase, supportsCopyMem
 
-template fuzzMax*(len: Positive) {.pragma.}
-template noFuzz* {.pragma.}
-
 when not defined(fuzzSa):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}

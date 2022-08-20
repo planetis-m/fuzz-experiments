@@ -72,24 +72,24 @@ template sampleAttempt*(call: untyped) =
   inc res
   call
 
-proc sample*[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+proc sample*[T: distinct](x: T; s: var Sampler; r: var Rand; res: var int) =
   when compiles(mutate(x, 0, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
-    sample(x.distinctBase, depth, s, r, res)
+    sample(x.distinctBase, s, r, res)
 
-proc sample*[T: SomeNumber](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+proc sample*[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int) =
+proc sample*[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
+proc sample*[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
   when compiles(mutate(x, 0, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
     for v in fields(x):
-      sample(v, depth, s, r, res)
+      sample(v, s, r, res)
 
 template pickMutate*(call: untyped) =
   if res > 0:
@@ -97,28 +97,28 @@ template pickMutate*(call: untyped) =
     if res == 0:
       call
 
-proc pick*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; enforceChanges: bool;
+proc pick*[T: distinct](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
   else:
-    pick(x.distinctBase, depth, sizeIncreaseHint, enforceChanges, r, res)
+    pick(x.distinctBase, sizeIncreaseHint, enforceChanges, r, res)
 
-proc pick*[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; enforceChanges: bool;
+proc pick*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*[T](x: var seq[T], depth: int, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
+proc pick*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; enforceChanges: bool;
+proc pick*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
   else:
     for v in fields(x):
-      pick(v, depth, sizeIncreaseHint, enforceChanges, r, res)
+      pick(v, sizeIncreaseHint, enforceChanges, r, res)
 
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
@@ -141,10 +141,10 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: boo
     else:
       var res = 0
       var s: Sampler[int]
-      sample(x, MaxInitializeDepth, s, r, res)
+      sample(x, s, r, res)
       #assert not s.isEmpty
       res = s.selected
-      pick(x, MaxInitializeDepth, sizeIncreaseHint, enforceChanges, r, res)
+      pick(x, sizeIncreaseHint, enforceChanges, r, res)
 
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:

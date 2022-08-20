@@ -47,6 +47,7 @@ DONE after 4/8
 - [X] Step through example mutator and gain knowledge of how it works and how it can be improved. (3.0h) 17/8
 - [X] Further split into procs, convert generic template into macro, and write experimental customMutator. (1.0h) 18/8
 - [X] Added a post-processor step and more cleanups. (2.0h) 19/8
+- [X] Need to refactor sampler/picker/mutator. (1h) 20/8
 
 TODO
 ====
@@ -57,7 +58,6 @@ TODO
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Investigate how easy it would be to add a single custom pragma "userMax".
 - [ ] Write some docs and a ref example.
-- [ ] Need to refactor sampler/picker/mutator.
 
 MAYBE
 =====

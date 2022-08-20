@@ -21,7 +21,10 @@ const
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand)
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; r: var Rand)
-proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand)
+
+proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; r: var Rand)
+proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; r: var Rand)
+proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; r: var Rand)
 
 proc flipBit*(bytes: ptr UncheckedArray[byte]; len: int; r: var Rand) =
   # Flips random bit in the buffer.
@@ -49,7 +52,7 @@ proc mutateEnum*(index, itemCount: int; r: var Rand): int =
 proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
     r: var Rand): seq[T] =
   template newInput: untyped =
-    (var tmp = default(T); mutate(tmp, sizeIncreaseHint, r); tmp)
+    (var tmp = default(T); runMutator(tmp, sizeIncreaseHint, r); tmp)
   result = value
   while result.len > 0 and r.rand(bool):
     result.delete(rand(r, result.high))
@@ -65,7 +68,7 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: Natural; sizeIncreaseHint: int;
     return result
   else:
     let index = rand(r, result.high)
-    mutate(result[index], sizeIncreaseHint, r)
+    runMutator(result[index], sizeIncreaseHint, r)
 
 proc sample*[T: distinct](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
   sample(x.distinctBase, depth, s, r, res)
@@ -109,16 +112,29 @@ proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; 
     for v in fields(x):
       pick(v, depth, sizeIncreaseHint, r, res)
 
-proc mutateObj*[T: object](value: var T; sizeIncreaseHint: int;
+proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; r: var Rand) =
+  when compiles(mutate(x, sizeIncreaseHint, r)): mutate(x, sizeIncreaseHint, r)
+  else: runMutator(x.distinctBase, sizeIncreaseHint, r)
+
+proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; r: var Rand) =
+  mutate(x, sizeIncreaseHint, r)
+
+proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; r: var Rand) =
+  mutate(x, sizeIncreaseHint, r)
+
+proc runMutator*[T: object](x: var T; sizeIncreaseHint: int;
     r: var Rand) =
-  if rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
+  when compiles(mutate(x, sizeIncreaseHint, r)):
+    mutate(x, sizeIncreaseHint, r)
   else:
-    var res = 0
-    var s: Sampler[int]
-    sample(value, 0, s, r, res)
-    res = s.selected
-    pick(value, 0, sizeIncreaseHint, r, res)
+    if rand(r, RandomToDefaultRatio - 1) == 0:
+      reset(x)
+    else:
+      var res = 0
+      var s: Sampler[int]
+      sample(x, 0, s, r, res)
+      res = s.selected
+      pick(x, 0, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
   if rand(r, RandomToDefaultRatio - 1) == 0:
@@ -135,21 +151,17 @@ proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; r: var Rand) =
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; r: var Rand) =
   repeatMutate(mutateSeq(value, high(Natural), sizeIncreaseHint, r))
 
-proc mutate*[T: object](value: var T; sizeIncreaseHint: int; r: var Rand) =
-  mutateObj(value, sizeIncreaseHint, r)
-
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
-  if depth < 0:
-    when not supportsCopyMem(T): reset(x)
+  when compiles(postProcess(x, r)):
+    if depth < 0:
+      when not supportsCopyMem(T): reset(x)
+    else: postProcess(x, r)
   else:
-    when compiles(postProcess(x, r)):
-      postProcess(x, r)
-    else:
-      runPostProcessor(x.distinctBase, depth-1, r)
+    runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
   if depth >= 0:
@@ -177,8 +189,7 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
         runPostProcessor(v, depth-1, r)
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
-  mixin mutate, postProcess
-  mutate(x, sizeIncreaseHint, r)
+  runMutator(x, sizeIncreaseHint, r)
   runPostProcessor(x, MaxInitializeDepth, r)
 
 template mutatorImpl(target, mutator, typ: untyped) =

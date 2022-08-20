@@ -120,7 +120,7 @@ proc choose*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand
 
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, r)):
-    if rand(r, RandomToDefaultRatio - 1) == 0:
+    if rand(r, RandomToDefaultRatio - 1) == 0: # Here might be the wrong level of abraction for this.
       reset(x)
     else:
       mutate(x, sizeIncreaseHint, r)

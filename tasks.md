@@ -49,6 +49,7 @@ DONE after 4/8
 - [X] Added a post-processor step and more cleanups. (2.0h) 19/8
 - [X] Need to refactor sampler/picker/mutator. (1h) 20/8
 - [X] Investigate how easy it would be to add a single custom pragma "userMax".
+- [X] Small refactor to prevent creating so many default values. (1h) 20/8
 
 TODO
 ====
@@ -58,7 +59,6 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
-- [ ] Small refactor to prevent creating so many default values.
 
 MAYBE
 =====

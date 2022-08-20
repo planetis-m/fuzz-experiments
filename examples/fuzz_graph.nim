@@ -53,13 +53,13 @@ when defined(runFuzzTests) and isMainModule:
 
   {.experimental: "strictFuncs".}
 
-  proc mutate(value: var NodeIdx; sizeIncreaseHint: int; r: var Rand) =
+  proc mutate(value: var NodeIdx; userMax, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
-  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: int; r: var Rand) =
+  proc mutate[T](value: var seq[Node[T]]; userMax, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: int; r: var Rand) =
+  proc mutate(value: var seq[NodeIdx]; userMax, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
 
   proc postProcess[T: SomeNumber](x: var seq[Node[T]]; r: var Rand) =

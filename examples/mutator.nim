@@ -1,10 +1,10 @@
 import std/random, common, sampler, macros
 from typetraits import distinctBase, supportsCopyMem
 
-proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
-  {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
-
 when not defined(fuzzSa):
+  proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
+    {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
+
   proc mutate*(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
       importc: "LLVMFuzzerMutate".}
 
@@ -78,8 +78,11 @@ proc sample*[T](x: seq[T], depth: int, s: var Sampler; r: var Rand; res: var int
   sampleTest(test(s, r, DefaultMutateWeight, res))
 
 proc sample*[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var int) =
-  for v in fields(x):
-    sample(v, depth, s, r, res)
+  when compiles(mutate(x, 0, r)):
+    sampleTest(test(x, r, DefaultMutateWeight, res))
+  else:
+    for v in fields(x):
+      sample(v, depth, s, r, res)
 
 proc pick*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
   pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
@@ -97,8 +100,11 @@ proc pick*[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res
   pickMutate(mutate(x, sizeIncreaseHint, r))
 
 proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
-  for v in fields(x):
-    pick(v, depth, sizeIncreaseHint, r, res)
+  when compiles(mutate(x, sizeIncreaseHint, r)):
+    pickMutate(mutate(x, sizeIncreaseHint, r))
+  else:
+    for v in fields(x):
+      pick(v, depth, sizeIncreaseHint, r, res)
 
 proc mutateObj*[T: object](value: var T; sizeIncreaseHint: int;
     r: var Rand) =
@@ -143,8 +149,9 @@ proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
       runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    postProcess(x, r)
+  if depth >= 0:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
 
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
   if depth < 0:

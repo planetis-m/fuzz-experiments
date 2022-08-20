@@ -1,4 +1,4 @@
-# -seed=1172144200
+# -seed=1172144200 629243297 2130767957
 when defined(runFuzzTests):
   import std/hashes
 
@@ -53,25 +53,14 @@ when defined(runFuzzTests) and isMainModule:
 
   {.experimental: "strictFuncs".}
 
-  proc mutate(value: var NodeIdx; userMax, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  proc mutate(value: var NodeIdx; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
-  proc mutate[T](value: var seq[Node[T]]; userMax, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
 
-  proc mutate(value: var seq[NodeIdx]; userMax, sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
     repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
-
-  proc postProcess[T: SomeNumber](x: var seq[Node[T]]; r: var Rand) =
-    if x.len >= 8:
-      x[0].data = 63
-      x[1].data = 3
-      x[2].data = -56
-      x[3].data = 100
-      x[4].data = -100
-      x[5].data = -78
-      x[6].data = 46
-      x[7].data = 120
 
   func fuzzTarget(x: Graph[int8]) =
     when defined(dumpFuzzInput): debugEcho(x)

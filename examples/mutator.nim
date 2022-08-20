@@ -93,30 +93,30 @@ proc sample*[T: object](x: T, depth: int, s: var Sampler; r: var Rand; res: var 
     for v in fields(x):
       sample(v, depth, s, r, res)
 
-template pickMutate*(call: untyped) =
+template chooseMutate*(call: untyped) =
   if res > 0:
     dec res
     if res == 0:
       call
 
-proc pick*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+proc choose*[T: distinct](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, r)):
-    pickMutate(mutate(x, sizeIncreaseHint, r))
+    chooseMutate(mutate(x, sizeIncreaseHint, r))
   else:
-    pick(x.distinctBase, depth, sizeIncreaseHint, r, res)
+    choose(x.distinctBase, depth, sizeIncreaseHint, r, res)
 
-proc pick*[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
-  pickMutate(mutate(x, sizeIncreaseHint, r))
+proc choose*[T: SomeNumber](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+  chooseMutate(mutate(x, sizeIncreaseHint, r))
 
-proc pick*[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
-  pickMutate(mutate(x, sizeIncreaseHint, r))
+proc choose*[T](x: var seq[T], depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+  chooseMutate(mutate(x, sizeIncreaseHint, r))
 
-proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
+proc choose*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, r)):
-    pickMutate(mutate(x, sizeIncreaseHint, r))
+    chooseMutate(mutate(x, sizeIncreaseHint, r))
   else:
     for v in fields(x):
-      pick(v, depth, sizeIncreaseHint, r, res)
+      choose(v, depth, sizeIncreaseHint, r, res)
 
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, r)):
@@ -150,7 +150,7 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int;
       var s: Sampler[int]
       sample(x, 0, s, r, res)
       res = s.selected
-      pick(x, 0, sizeIncreaseHint, r, res)
+      choose(x, 0, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
   var tmp = value

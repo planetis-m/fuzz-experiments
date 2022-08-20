@@ -2,7 +2,7 @@ import std/random, common, sampler, macros
 from typetraits import distinctBase, supportsCopyMem
 
 template fuzzMax*(len: Positive) {.pragma.}
-template fuzzIgnore* {.pragma.}
+template noFuzz* {.pragma.}
 
 when not defined(fuzzSa):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -120,7 +120,7 @@ proc pick*[T: object](x: var T, depth: int, sizeIncreaseHint: int; r: var Rand; 
 
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, r)):
-    if rand(r, RandomToDefaultRatio - 1) == 0: # Here might be the wrong level of abraction for this.
+    if rand(r, RandomToDefaultRatio - 1) == 0:
       reset(x)
     else:
       mutate(x, sizeIncreaseHint, r)
@@ -174,7 +174,8 @@ proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
   when compiles(postProcess(x, r)):
     if depth < 0:
       when not supportsCopyMem(T): reset(x)
-    else: postProcess(x, r)
+    else:
+      postProcess(x, r)
   else:
     runPostProcessor(x.distinctBase, depth-1, r)
 

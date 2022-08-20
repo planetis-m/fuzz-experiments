@@ -146,10 +146,10 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int;
     else:
       var res = 0
       var s: Sampler[int]
-      sample(x, 0, s, r, res)
+      sample(x, MaxInitializeDepth, s, r, res)
       #assert not s.isEmpty
       res = s.selected
-      pick(x, 0, sizeIncreaseHint, r, res)
+      pick(x, MaxInitializeDepth, sizeIncreaseHint, r, res)
 
 template repeatMutate*(call: untyped) =
   var tmp = value

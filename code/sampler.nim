@@ -10,7 +10,7 @@ proc pick*[T](s: var Sampler[T], r: var Rand; weight: Natural): bool =
   s.totalWeight += weight
   weight == s.totalWeight or r.rand(1..s.totalWeight) <= weight
 
-proc test*[T](s: var Sampler[T], r: var Rand; weight: Natural; item: sink T) =
+proc attempt*[T](s: var Sampler[T], r: var Rand; weight: Natural; item: sink T) =
   if pick(s, r, weight): s.selected = item
 
 proc selected*[T](s: Sampler[T]): lent T = s.selected

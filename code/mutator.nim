@@ -58,7 +58,6 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
       result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, result.len)
     result.insert(newInput[T](sizeIncreaseHint, r), index)
-  # There is a chance we delete and then insert the same item.
   if result != value:
     return result
   if result.len == 0:
@@ -73,7 +72,7 @@ template sampleAttempt*(call: untyped) =
   call
 
 proc sample*[T: distinct](x: T; s: var Sampler; r: var Rand; res: var int) =
-  when compiles(mutate(x, 0, r)):
+  when compiles(mutate(x, 0, false, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
     sample(x.distinctBase, s, r, res)
@@ -85,7 +84,7 @@ proc sample*[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample*[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
-  when compiles(mutate(x, 0, r)):
+  when compiles(mutate(x, 0, true, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
     for v in fields(x):

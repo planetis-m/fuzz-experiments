@@ -50,11 +50,12 @@ DONE after 4/8
 - [X] Need to refactor sampler/picker/mutator. (1h) 20/8
 - [X] Investigate how easy it would be to add a single custom pragma "userMax".
 - [X] Small refactor to prevent creating so many default values. (1h) 20/8
+- [X] Correct size hint calculations and minor improvements (1.5h) 21/8
 
 TODO
 ====
 
-- [ ] See if hashing the seq and comparing with an old hash improves performance. (2.75h) 14/8,21/8
+- [ ] See if hashing the seq and comparing with an old hash improves performance. (1.25h) 14/8,21/8
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)

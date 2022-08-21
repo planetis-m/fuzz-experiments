@@ -54,20 +54,18 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
   result = value
   while result.len > 0 and r.rand(bool):
     result.delete(rand(r, result.high))
-  var currentSize = result.byteSize
   while result.len < userMax and sizeIncreaseHint > 0 and
-      currentSize < sizeIncreaseHint and r.rand(bool):
+      result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, result.len)
-    result.insert(newInput[T](sizeIncreaseHint-currentSize, r), index)
-    currentSize = result.byteSize
+    result.insert(newInput[T](sizeIncreaseHint, r), index)
   if result != value:
     return result
   if result.len == 0:
-    result.add(newInput[T](sizeIncreaseHint-currentSize, r))
+    result.add(newInput[T](sizeIncreaseHint, r))
     return result
   else:
     let index = rand(r, result.high)
-    runMutator(result[index], sizeIncreaseHint-currentSize, true, r)
+    runMutator(result[index], sizeIncreaseHint, true, r)
 
 template sampleAttempt*(call: untyped) =
   inc res

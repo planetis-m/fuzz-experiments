@@ -54,18 +54,20 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
   result = value
   while result.len > 0 and r.rand(bool):
     result.delete(rand(r, result.high))
+  var currentSize = result.byteSize
   while result.len < userMax and sizeIncreaseHint > 0 and
-      result.byteSize < sizeIncreaseHint and r.rand(bool):
+      currentSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, result.len)
-    result.insert(newInput[T](sizeIncreaseHint, r), index)
+    result.insert(newInput[T](sizeIncreaseHint-currentSize, r), index)
+    currentSize = result.byteSize
   if result != value:
     return result
   if result.len == 0:
-    result.add(newInput[T](sizeIncreaseHint, r))
+    result.add(newInput[T](sizeIncreaseHint-currentSize, r))
     return result
   else:
     let index = rand(r, result.high)
-    runMutator(result[index], sizeIncreaseHint, true, r)
+    runMutator(result[index], sizeIncreaseHint-currentSize, true, r)
 
 template sampleAttempt*(call: untyped) =
   inc res
@@ -266,7 +268,7 @@ template mutatorImpl(target, mutator, typ: untyped) =
 
 proc commonImpl(target, mutator: NimNode): NimNode =
   let typ = getTypeImpl(target).params[^1][1]
-  result = newStmtList(getAst(mutatorImpl(target, mutator, typ)))
+  result = getAst(mutatorImpl(target, mutator, typ))
 
 macro defaultMutator*(target: proc) =
   commonImpl(target, bindSym"myMutator")

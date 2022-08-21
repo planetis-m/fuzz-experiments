@@ -64,9 +64,9 @@ MAYBE
 =====
 
 - [ ] Step though LPM graph example to understand how it handles nested messages mutation.
-- [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover.
+- [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover. (this is a good idea.)
 - [ ] Experiment with the idea of trying to mutate everything at once. (might not work well)
-- [ ] See if the original graph mutator performs any better than the 'dumb' one.
+- [ ] See if the original graph mutator performs any better than the 'dumb' one. (sure it does.)
 
 POSTPONED after first release
 =============================

@@ -52,20 +52,24 @@ proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T =
 proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
     r: var Rand): seq[T] =
   result = value
+  let previousSize = result.byteSize
   while result.len > 0 and r.rand(bool):
     result.delete(rand(r, result.high))
+  var currentSize = result.byteSize
+  template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
   while result.len < userMax and sizeIncreaseHint > 0 and
-      result.byteSize < sizeIncreaseHint and r.rand(bool):
+      currentSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, result.len)
-    result.insert(newInput[T](sizeIncreaseHint, r), index)
+    result.insert(newInput[T](remainingSize, r), index)
+    currentSize = result.byteSize
   if result != value:
     return result
   if result.len == 0:
-    result.add(newInput[T](sizeIncreaseHint, r))
+    result.add(newInput[T](remainingSize, r))
     return result
   else:
     let index = rand(r, result.high)
-    runMutator(result[index], sizeIncreaseHint, true, r)
+    runMutator(result[index], remainingSize, true, r)
 
 template sampleAttempt*(call: untyped) =
   inc res

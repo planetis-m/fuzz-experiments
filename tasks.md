@@ -54,7 +54,7 @@ DONE after 4/8
 TODO
 ====
 
-- [ ] See if hashing the seq and comparing with an old hash improves performance. (1.25h+) 14/8-
+- [ ] See if hashing the seq and comparing with an old hash improves performance. (2.75h) 14/8,21/8
 - [ ] Write mutators for tables. Do we need experimental tables API that returns the index?
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)

@@ -84,7 +84,7 @@ proc sample*[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample*[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
-  when compiles(mutate(x, 0, true, r)):
+  when compiles(mutate(x, 0, false, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
     for v in fields(x):

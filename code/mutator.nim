@@ -57,8 +57,7 @@ proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
     result.delete(rand(r, result.high))
   var currentSize = result.byteSize
   template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
-  while result.len < userMax and sizeIncreaseHint > 0 and
-      remainingSize > 0 and r.rand(bool):
+  while result.len < userMax and remainingSize > 0 and r.rand(bool):
     let index = rand(r, result.len)
     result.insert(newInput[T](remainingSize, r), index)
     currentSize = result.byteSize

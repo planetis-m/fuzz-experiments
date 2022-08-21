@@ -46,8 +46,7 @@ proc mutateEnum*(index, itemCount: int; r: var Rand): int =
   if itemCount <= 1: 0
   else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
-proc newInput[T](sizeIncreaseHint: int; r: var Rand): T =
-  result = default(T)
+proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T =
   runMutator(result, sizeIncreaseHint, false, r)
 
 proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;

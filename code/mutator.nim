@@ -149,10 +149,11 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: boo
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
     reset(value)
-  var tmp = value
-  for i in 1..10:
-    value = call
-    if not enforceChanges or value != tmp: return
+  else:
+    var tmp = value
+    for i in 1..10:
+      value = call
+      if not enforceChanges or value != tmp: return
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))

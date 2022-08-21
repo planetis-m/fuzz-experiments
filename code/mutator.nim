@@ -46,23 +46,24 @@ proc mutateEnum*(index, itemCount: int; r: var Rand): int =
   if itemCount <= 1: 0
   else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
+proc newInput[T](sizeIncreaseHint: int; r: var Rand): T =
+  result = default(T)
+  runMutator(result, sizeIncreaseHint, false, r)
+
 proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
     r: var Rand): seq[T] =
-  template newInput: untyped =
-    (var tmp = default(T); runMutator(tmp, sizeIncreaseHint, false, r); tmp)
-
   result = value
   while result.len > 0 and r.rand(bool):
     result.delete(rand(r, result.high))
   while result.len < userMax and sizeIncreaseHint > 0 and
       result.byteSize < sizeIncreaseHint and r.rand(bool):
     let index = rand(r, result.len)
-    result.insert(newInput(), index)
+    result.insert(newInput[T](sizeIncreaseHint, r), index)
   # There is a chance we delete and then insert the same item.
   if result != value:
     return result
   if result.len == 0:
-    result.add(newInput)
+    result.add(newInput[T](sizeIncreaseHint, r))
     return result
   else:
     let index = rand(r, result.high)

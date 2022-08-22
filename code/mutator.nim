@@ -19,13 +19,6 @@ const
 type
   ByteSized = int8|uint8|byte|bool|char
 
-proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -100,6 +93,43 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
     result = value
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
+
+
+template repeatMutate*(call: untyped) =
+  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(value)
+  else:
+    var tmp = value
+    for i in 1..10:
+      value = call
+      if not enforceChanges or value != tmp: return
+
+template repeatMutateInplace*(call: untyped) =
+  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(value)
+  else:
+    var tmp {.inject.} = value
+    for i in 1..10:
+      let notEqual = call
+      if not enforceChanges or notEqual: return
+
+proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  value = not value
+
+proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateValue(value, r))
+
+proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateValue(value, r))
+
+proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutateInplace(mutateSeq(value, tmp, high(int), sizeIncreaseHint, r))
+
+proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateByteSizedSeq(move value, high(int), sizeIncreaseHint, r))
+
+proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
 
 template sampleAttempt*(call: untyped) =
   inc res
@@ -209,49 +239,6 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: boo
       res = s.selected
       pick(x, sizeIncreaseHint, enforceChanges, r, res)
 
-template repeatMutate*(call: untyped) =
-  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
-  else:
-    var tmp = value
-    for i in 1..10:
-      value = call
-      if not enforceChanges or value != tmp: return
-
-template repeatMutateInplace*(call: untyped) =
-  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
-  else:
-    var tmp {.inject.} = value
-    for i in 1..10:
-      let notEqual = call
-      if not enforceChanges or notEqual: return
-
-proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  value = not value
-
-proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateValue(value, r))
-
-proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateValue(value, r))
-
-proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutateInplace(mutateSeq(value, tmp, high(int), sizeIncreaseHint, r))
-
-proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateByteSizedSeq(move value, high(int), sizeIncreaseHint, r))
-
-proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
-
-proc runPostProcessor*(x: var bool, depth: int; r: var Rand)
-proc runPostProcessor*(x: var char, depth: int; r: var Rand)
-proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
-proc runPostProcessor*(x: var string, depth: int; r: var Rand)
-proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
-proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
-
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
   when compiles(postProcess(x, r)):
     if depth < 0:
@@ -317,6 +304,7 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
       postProcess(x, r)
     # When there is a user provided mutator, don't touch private fields
     elif compiles(mutate(x, 0, false, r)):
+      # Guess how to traverse a data structure.
       when compiles(for v in mitems(x): discard):
         for v in mitems(x):
           runPostProcessor(v, depth-1, r)

@@ -27,12 +27,12 @@ proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: 
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
 proc flipBit*(bytes: ptr UncheckedArray[byte]; len: int; r: var Rand) =
-  # Flips random bit in the buffer.
+  ## Flips random bit in the buffer.
   let bit = rand(r, len * 8 - 1)
   bytes[bit div 8] = bytes[bit div 8] xor (1'u8 shl (bit mod 8))
 
 proc flipBit*[T](value: T; r: var Rand): T =
-  # Flips random bit in the value.
+  ## Flips random bit in the value.
   result = value
   flipBit(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), r)
 
@@ -50,6 +50,7 @@ proc mutateEnum*(index, itemCount: int; r: var Rand): int =
   else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
 proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T =
+  ## Creates new input with a chance of returning default(T).
   runMutator(result, sizeIncreaseHint, false, r)
 
 proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHint: int;
@@ -83,6 +84,7 @@ proc mutateByteSizedSeq*[T: ByteSized](value: sink seq[T]; userMax, sizeIncrease
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
     when T is bool:
+      # Fix bool values so UBSan stops complaining.
       for x in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
 
 proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
@@ -93,7 +95,6 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
     result = value
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
-
 
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
@@ -131,72 +132,72 @@ proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChan
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
 
-template sampleAttempt*(call: untyped) =
+template sampleAttempt(call: untyped) =
   inc res
   call
 
-proc sample*[T: distinct](x: T; s: var Sampler; r: var Rand; res: var int) =
+proc sample[T: distinct](x: T; s: var Sampler; r: var Rand; res: var int) =
   when compiles(mutate(x, 0, false, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
     sample(x.distinctBase, s, r, res)
 
-proc sample*(x: bool; s: var Sampler; r: var Rand; res: var int) =
+proc sample(x: bool; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*(x: char; s: var Sampler; r: var Rand; res: var int) =
+proc sample(x: char; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
+proc sample[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
+proc sample[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*(x: string; s: var Sampler; r: var Rand; res: var int) =
+proc sample(x: string; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
-proc sample*[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
+proc sample[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
   when compiles(mutate(x, 0, false, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
   else:
     for v in fields(x):
       sample(v, s, r, res)
 
-template pickMutate*(call: untyped) =
+template pickMutate(call: untyped) =
   if res > 0:
     dec res
     if res == 0:
       call
 
-proc pick*[T: distinct](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick[T: distinct](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
   else:
     pick(x.distinctBase, sizeIncreaseHint, enforceChanges, r, res)
 
-proc pick*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick(x: var bool; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*(x: var char; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick(x: var char; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
+proc pick[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
+proc pick(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
@@ -304,7 +305,7 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
       postProcess(x, r)
     # When there is a user provided mutator, don't touch private fields
     elif compiles(mutate(x, 0, false, r)):
-      # Guess how to traverse a data structure.
+      # Guess how to traverse a data structure, if it's even one.
       when compiles(for v in mitems(x): discard):
         for v in mitems(x):
           runPostProcessor(v, depth-1, r)

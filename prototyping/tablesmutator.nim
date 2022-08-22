@@ -41,6 +41,10 @@ proc keyAtHidden*[A, B](t: (Table[A, B]|OrderedTable[A, B]); current: int): lent
   ## Undocumented API for iteration.
   result = t.data[current].key
 
+proc keyAtHidden*[A, B](t: var (Table[A, B]|OrderedTable[A, B]); current: int): var A {.inline.} =
+  ## Undocumented API for iteration.
+  result = t.data[current].key
+
 proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T = discard
 proc runMutator*[T](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) = discard
 

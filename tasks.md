@@ -54,7 +54,7 @@ DONE after 4/8
 - [X] See if hashing the seq and comparing with an old hash improves performance. (1.25h) 14/8,22/8 (faster but incorrect hash for 0-len seqs due to openarray, rejected.)
 - [X] Write mutators for tables. Not yet ready for v1. 22/8
 - [X] Bug: post-processor shouldn't run if there is a mutate function for an object. 22/8
-- [X] Add mutator overloads for seq[byte]/string and test them. (5.5h) 22/8
+- [X] Add mutator overloads for seq[byte]/string and test them. (6.5h) 22/8
 
 TODO
 ====

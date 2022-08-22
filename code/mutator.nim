@@ -315,6 +315,7 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
+    # When there is a user provided mutator, don't touch private fields
     elif compiles(mutate(x, 0, false, r)):
       when compiles(for v in mitems(x): discard):
         for v in mitems(x):

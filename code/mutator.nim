@@ -22,10 +22,15 @@ type
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
 proc flipBit*(bytes: ptr UncheckedArray[byte]; len: int; r: var Rand) =
@@ -104,6 +109,12 @@ proc sample*[T: distinct](x: T; s: var Sampler; r: var Rand; res: var int) =
   else:
     sample(x.distinctBase, s, r, res)
 
+proc sample*(x: bool; s: var Sampler; r: var Rand; res: var int) =
+  sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
+
+proc sample*(x: char; s: var Sampler; r: var Rand; res: var int) =
+  sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
+
 proc sample*[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
@@ -132,6 +143,14 @@ proc pick*[T: distinct](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
   else:
     pick(x.distinctBase, sizeIncreaseHint, enforceChanges, r, res)
+
+proc pick*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+
+proc pick*(x: var char; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
 proc pick*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
@@ -168,6 +187,12 @@ proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; 
 proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
+proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  mutate(x, sizeIncreaseHint, enforceChanges, r)
+
+proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  mutate(x, sizeIncreaseHint, enforceChanges, r)
+
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     mutate(x, sizeIncreaseHint, enforceChanges, r)
@@ -200,6 +225,12 @@ template repeatMutateInplace*(call: untyped) =
       let notEqual = call
       if not enforceChanges or notEqual: return
 
+proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  value = not value
+
+proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateValue(value, r))
+
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))
 
@@ -212,9 +243,11 @@ proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChan
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateString(value, high(int), sizeIncreaseHint, r))
 
+proc runPostProcessor*(x: var bool, depth: int; r: var Rand)
+proc runPostProcessor*(x: var char, depth: int; r: var Rand)
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
-proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
 proc runPostProcessor*(x: var string, depth: int; r: var Rand)
+proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
@@ -238,6 +271,16 @@ proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
   else:
     runPostProcessor(x.distinctBase, depth-1, r)
 
+proc runPostProcessor*(x: var bool, depth: int; r: var Rand) =
+  if depth >= 0:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+
+proc runPostProcessor*(x: var char, depth: int; r: var Rand) =
+  if depth >= 0:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
   if depth >= 0:
     when compiles(postProcess(x, r)):
@@ -259,6 +302,9 @@ proc runPostProcessor*(x: var string, depth: int; r: var Rand) =
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
+    else:
+      for i in 0..<x.len:
+        runPostProcessor(x[i], depth-1, r)
 
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   if depth < 0:

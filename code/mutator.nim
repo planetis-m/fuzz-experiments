@@ -16,8 +16,13 @@ const
   DefaultMutateWeight* = 1000000
   MaxInitializeDepth* = 200
 
+type
+  ByteSized = int8|uint8|char
+
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -70,6 +75,25 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
     runMutator(value[index], remainingSize, true, r)
     result = value != previous
 
+proc mutateSeqOfByteSized*[T: ByteSized](value: sink seq[T]; userMax, sizeIncreaseHint: int;
+    r: var Rand): seq[T] =
+  if r.rand(0..20) == 0:
+    result = @[]
+  else:
+    let oldSize = value.len
+    result = value
+    result.setLen(max(1, oldSize + sizeIncreaseHint))
+    result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
+
+proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
+  if r.rand(0..20) == 0:
+    result = ""
+  else:
+    let oldSize = value.len
+    result = value
+    result.setLen(max(1, oldSize + sizeIncreaseHint))
+    result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
+
 template sampleAttempt*(call: untyped) =
   inc res
   call
@@ -84,6 +108,9 @@ proc sample*[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample*[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
+  sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
+
+proc sample*(x: string; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample*[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
@@ -114,6 +141,10 @@ proc pick*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
+proc pick*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand;
+    res: var int) =
+  pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+
 proc pick*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
@@ -132,6 +163,9 @@ proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges:
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  mutate(x, sizeIncreaseHint, enforceChanges, r)
+
+proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
@@ -169,11 +203,18 @@ template repeatMutateInplace*(call: untyped) =
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))
 
-proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutateInplace(mutateSeq(value, tmp, high(int), sizeIncreaseHint, r))
+
+proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateSeqOfByteSized(value, high(int), sizeIncreaseHint, r))
+
+proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateString(value, high(int), sizeIncreaseHint, r))
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
+proc runPostProcessor*(x: var string, depth: int; r: var Rand)
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
@@ -211,6 +252,13 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
     else:
       for i in 0..<x.len:
         runPostProcessor(x[i], depth-1, r)
+
+proc runPostProcessor*(x: var string, depth: int; r: var Rand) =
+  if depth < 0:
+    reset(x)
+  else:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
 
 proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   if depth < 0:

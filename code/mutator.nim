@@ -50,7 +50,7 @@ proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T =
   runMutator(result, sizeIncreaseHint, false, r)
 
 proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHint: int;
-    r: var Rand) =
+    r: var Rand): bool =
   let previousSize = previous.byteSize
   while value.len > 0 and r.rand(bool):
     value.delete(rand(r, value.high))
@@ -61,12 +61,14 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
     value.insert(newInput[T](remainingSize, r), index)
     currentSize = value.byteSize
   if value != previous:
-    discard
+    result = true
   elif value.len == 0:
     value.add(newInput[T](remainingSize, r))
+    result = true
   else:
     let index = rand(r, value.high)
     runMutator(value[index], remainingSize, true, r)
+    result = value != previous
 
 template sampleAttempt*(call: untyped) =
   inc res
@@ -161,8 +163,8 @@ template repeatMutateInplace*(call: untyped) =
   else:
     var tmp {.inject.} = value
     for i in 1..10:
-      call
-      if not enforceChanges or value != tmp: return
+      let notEqual = call
+      if not enforceChanges or notEqual: return
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))

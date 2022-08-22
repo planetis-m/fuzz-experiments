@@ -16,7 +16,13 @@ proc nextPositionHidden*[A, B](t: OrderedTable[A, B]; current: int): int =
   while result >= 0 and not isFilled(t.data[result].hcode):
     result = t.data[result].next
 
-proc keyAtHidden*[A, B](t: OrderedTable[A, B]; current: int): lent A {.inline.} =
+proc nextPositionHidden*[A, B](t: Table[A, B]; current: int): int =
+  ## Undocumented API for iteration.
+  result = current
+  while result <= t.data.high and not isFilled(t.data[result].hcode):
+    inc result
+
+proc keyAtHidden*[A, B](t: (Table[A, B]|OrderedTable[A, B]); current: int): lent A {.inline.} =
   ## Undocumented API for iteration.
   result = t.data[current].key
 
@@ -27,11 +33,18 @@ proc positionOfHidden*[A, B](t: OrderedTable[A, B]; index: int): int =
     result = t.nextPositionHidden(result)
     dec index
 
+proc positionOfHidden*[A, B](t: Table[A, B]; index: int): int =
+  var index = index
+  result = 0
+  while index > 0:
+    result = t.nextPositionHidden(result)
+    dec index
+
 proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T = discard
 proc runMutator*[T](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) = discard
 
-proc mutateTab*[A, B](value: var OrderedTable[A, B]; previous: OrderedTable[A, B]; userMax, sizeIncreaseHint: int;
-    r: var Rand): bool =
+proc mutateTab*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); previous: OrderedTable[A, B];
+    userMax, sizeIncreaseHint: int; r: var Rand): bool =
   let previousSize = previous.byteSize
   while value.len > 0 and r.rand(bool):
     let pos = positionOfHidden(value, rand(r, value.high))

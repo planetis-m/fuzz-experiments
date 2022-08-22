@@ -49,16 +49,7 @@ proc mutateEnum*(index, itemCount: int; r: var Rand): int =
 proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T =
   runMutator(result, sizeIncreaseHint, false, r)
 
-template repeatMutateSeq*(call: untyped) =
-  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
-  else:
-    var tmp {.inject.} = value
-    for i in 1..10:
-      call
-      if not enforceChanges or value != tmp: return
-
-proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax: int; sizeIncreaseHint: int;
+proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHint: int;
     r: var Rand) =
   let previousSize = previous.byteSize
   while value.len > 0 and r.rand(bool):
@@ -70,8 +61,8 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax: int; sizeIncrea
     value.insert(newInput[T](remainingSize, r), index)
     currentSize = value.byteSize
   if value != previous:
-    return
-  if value.len == 0:
+    discard
+  elif value.len == 0:
     value.add(newInput[T](remainingSize, r))
   else:
     let index = rand(r, value.high)
@@ -164,11 +155,20 @@ template repeatMutate*(call: untyped) =
       value = call
       if not enforceChanges or value != tmp: return
 
+template repeatMutateInplace*(call: untyped) =
+  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(value)
+  else:
+    var tmp {.inject.} = value
+    for i in 1..10:
+      call
+      if not enforceChanges or value != tmp: return
+
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))
 
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutateSeq(mutateSeq(value, tmp, sizeIncreaseHint, r))
+  repeatMutateInplace(mutateSeq(value, tmp, sizeIncreaseHint, r))
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)

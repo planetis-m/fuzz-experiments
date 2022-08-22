@@ -1,7 +1,5 @@
 # -seed=4013847822
 when defined(runFuzzTests):
-  import std/hashes
-
   const
     MaxNodes = 8 # User defined, statically limits number of nodes.
     MaxEdges = 2 # Limits number of edges
@@ -9,6 +7,7 @@ when defined(runFuzzTests):
   type
     NodeIdx = distinct int
 
+  proc `$`(x: NodeIdx): string {.borrow.}
   proc `==`(a, b: NodeIdx): bool {.borrow.}
 else:
   type
@@ -56,10 +55,10 @@ when defined(runFuzzTests) and isMainModule:
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-    repeatMutateSeq(mutateSeq(value, tmp, MaxNodes, sizeIncreaseHint, r))
+    repeatMutateInplace(mutateSeq(value, tmp, MaxNodes, sizeIncreaseHint, r))
 
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-    repeatMutateSeq(mutateSeq(value, tmp, MaxEdges, sizeIncreaseHint, r))
+    repeatMutateInplace(mutateSeq(value, tmp, MaxEdges, sizeIncreaseHint, r))
 
   #proc postProcess[T: SomeNumber](x: var seq[Node[T]]; r: var Rand) =
     #if x.len >= 8:

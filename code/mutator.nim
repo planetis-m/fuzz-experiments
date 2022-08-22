@@ -1,4 +1,5 @@
 import std/[random, macros], common, sampler
+import tablesexpapi
 from typetraits import distinctBase, supportsCopyMem
 
 when not defined(fuzzSa):
@@ -18,6 +19,7 @@ const
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -69,6 +71,30 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
     let index = rand(r, value.high)
     runMutator(value[index], remainingSize, true, r)
     result = value != previous
+
+proc mutateTab*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); previous: OrderedTable[A, B];
+    userMax, sizeIncreaseHint: int; r: var Rand): bool =
+  let previousSize = previous.byteSize
+  while value.len > 0 and r.rand(bool):
+    let pos = positionOfHidden(value, rand(r, value.len-1))
+    assert pos >= 0
+    value.del(value.keyAtHidden(pos))
+  var currentSize = value.byteSize
+  template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
+  while value.len < userMax and remainingSize > 0 and r.rand(bool):
+    let key = newInput[A](remainingSize, r)
+    value[key] = newInput[B](remainingSize-key.byteSize, r)
+    currentSize = value.byteSize
+  if value != previous:
+    return true
+  elif value.len == 0:
+    let key = newInput[A](remainingSize, r)
+    value[key] = newInput[B](remainingSize-key.byteSize, r)
+  else:
+    let pos = positionOfHidden(value, rand(r, value.len-1))
+    assert pos >= 0
+    runMutator(value.keyAtHidden(pos), remainingSize, true, r)
+  result = value != previous
 
 template sampleAttempt*(call: untyped) =
   inc res
@@ -171,6 +197,9 @@ proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges:
 
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutateInplace(mutateSeq(value, tmp, sizeIncreaseHint, r))
+
+proc mutate*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutateInplace(mutateTab(value, tmp, sizeIncreaseHint, r))
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)

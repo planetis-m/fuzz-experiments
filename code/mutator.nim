@@ -80,7 +80,7 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
     runMutator(value[index], remainingSize, true, r)
     result = value != previous
 
-proc mutateSeqOfByteSized*[T: ByteSized](value: sink seq[T]; userMax, sizeIncreaseHint: int;
+proc mutateByteSizedSeq*[T: ByteSized](value: sink seq[T]; userMax, sizeIncreaseHint: int;
     r: var Rand): seq[T] =
   if r.rand(0..20) == 0:
     result = @[]
@@ -90,7 +90,7 @@ proc mutateSeqOfByteSized*[T: ByteSized](value: sink seq[T]; userMax, sizeIncrea
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
     when T is bool:
-      for i in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
+      for x in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
 
 proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
   if r.rand(0..20) == 0:
@@ -240,7 +240,7 @@ proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforce
   repeatMutateInplace(mutateSeq(value, tmp, high(int), sizeIncreaseHint, r))
 
 proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateSeqOfByteSized(move value, high(int), sizeIncreaseHint, r))
+  repeatMutate(mutateByteSizedSeq(move value, high(int), sizeIncreaseHint, r))
 
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
@@ -258,18 +258,19 @@ proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
       when not supportsCopyMem(T): reset(x)
     else:
       postProcess(x, r)
-  elif compiles(for v in mitems(x): discard):
-    if depth < 0:
-      when not supportsCopyMem(T): reset(x)
-    else:
-      for v in mitems(x):
-        runPostProcessor(v, depth-1, r)
-  elif compiles(for k, v in mpairs(x): discard):
-    if depth < 0:
-      when not supportsCopyMem(T): reset(x)
-    else:
-      for k, v in mpairs(x):
-        runPostProcessor(v, depth-1, r)
+  elif compiles(mutate(x, 0, false, r)):
+    when compiles(for v in mitems(x): discard):
+      if depth < 0:
+        when not supportsCopyMem(T): reset(x)
+      else:
+        for v in mitems(x):
+          runPostProcessor(v, depth-1, r)
+    elif compiles(for k, v in mpairs(x): discard):
+      if depth < 0:
+        when not supportsCopyMem(T): reset(x)
+      else:
+        for k, v in mpairs(x):
+          runPostProcessor(v, depth-1, r)
   else:
     runPostProcessor(x.distinctBase, depth-1, r)
 
@@ -314,12 +315,13 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
-    elif compiles(for v in mitems(x): discard):
-      for v in mitems(x):
-        runPostProcessor(v, depth-1, r)
-    elif compiles(for k, v in mpairs(x): discard):
-      for k, v in mpairs(x):
-        runPostProcessor(v, depth-1, r)
+    elif compiles(mutate(x, 0, false, r)):
+      when compiles(for v in mitems(x): discard):
+        for v in mitems(x):
+          runPostProcessor(v, depth-1, r)
+      elif compiles(for k, v in mpairs(x): discard):
+        for k, v in mpairs(x):
+          runPostProcessor(v, depth-1, r)
     else:
       for v in fields(x):
         runPostProcessor(v, depth-1, r)

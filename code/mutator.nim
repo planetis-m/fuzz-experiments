@@ -352,10 +352,11 @@ template mutatorImpl(target, mutator, typ: untyped) =
     setLen(buffer, 1)
 
   proc testOneInputImpl[T](x: var T; data: openArray[byte]) =
-    if data.len > 1: # ignore '\n' passed by LibFuzzer.
+    if data.len > 1: # Ignore '\n' passed by LibFuzzer.
       try:
         FuzzTarget(target)(getInput(x, data))
       finally:
+        # Call Nim's compiler api to report unhandled exceptions.
         {.emit: "nimTestErrorFlag();".}
 
   proc customMutatorImpl(x: var typ; data: openArray[byte]; maxLen: int;

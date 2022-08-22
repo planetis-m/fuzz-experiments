@@ -42,20 +42,21 @@ proc mutateTab*[A, B](value: var OrderedTable[A, B]; previous: OrderedTable[A, B
   template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
   while value.len < userMax and remainingSize > 0 and r.rand(bool):
     let index = rand(r, value.len)
-    let pos = positionAtHidden(value, rand(r, value.high))
-    var key: A
-    var _: B
-    if pos >= 0:
-      (key, _) = value.pairAtHidden(pos)
+    if index == value.len:
+      let key = newInput[A](remainingSize, r)
+      currentSize = value.byteSize
+      value[key] = newInput[B](remainingSize, r)
     else:
-      key = newInput[A](remainingSize, r)
-    value[key] = newInput[B](remainingSize, r)
+      let pos = positionAtHidden(value, index)
+      assert pos >= 0
+      let (key, _) = value.pairAtHidden(pos)
+      value[key] = newInput[B](remainingSize, r)
     currentSize = value.byteSize
   if value != previous:
     result = true
   elif value.len == 0:
-    value[newInput[A](remainingSize, r)] = newInput[B](remainingSize, r)
-    result = true
+    value[newInput[A](remainingSize, r)] = (currentSize = value.byteSize; newInput[B](remainingSize, r))
+    result = value != previous
   else:
     let pos = positionAtHidden(value, rand(r, value.high))
     assert pos >= 0

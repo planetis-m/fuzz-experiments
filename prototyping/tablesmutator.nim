@@ -22,23 +22,23 @@ proc nextPositionHidden*[A, B](t: Table[A, B]; current: int): int =
   while result <= t.data.high and not isFilled(t.data[result].hcode):
     inc result
 
-proc keyAtHidden*[A, B](t: (Table[A, B]|OrderedTable[A, B]); current: int): lent A {.inline.} =
-  ## Undocumented API for iteration.
-  result = t.data[current].key
-
 proc positionOfHidden*[A, B](t: OrderedTable[A, B]; index: int): int =
   var index = index
   result = firstPositionHidden(t)
-  while index > 0:
+  while result >= 0 and index > 0:
     result = t.nextPositionHidden(result)
     dec index
 
 proc positionOfHidden*[A, B](t: Table[A, B]; index: int): int =
   var index = index
-  result = 0
-  while index > 0:
+  result = if t.counter > 0: 0 else: -1
+  while result >= 0 and index > 0:
     result = t.nextPositionHidden(result)
     dec index
+
+proc keyAtHidden*[A, B](t: (Table[A, B]|OrderedTable[A, B]); current: int): lent A {.inline.} =
+  ## Undocumented API for iteration.
+  result = t.data[current].key
 
 proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T = discard
 proc runMutator*[T](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) = discard

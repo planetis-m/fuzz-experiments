@@ -1,5 +1,4 @@
-import std/[random, macros], common, sampler
-import tablesexpapi
+import std/[random, macros], common, sampler, tablesexpapi
 from typetraits import distinctBase, supportsCopyMem
 
 when not defined(fuzzSa):
@@ -19,7 +18,8 @@ const
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc mutate*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc mutate*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); sizeIncreaseHint: int;
+    enforceChanges: bool; r: var Rand)
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -72,7 +72,7 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
     runMutator(value[index], remainingSize, true, r)
     result = value != previous
 
-proc mutateTab*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); previous: OrderedTable[A, B];
+proc mutateTab*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); previous: (Table[A, B]|OrderedTable[A, B]);
     userMax, sizeIncreaseHint: int; r: var Rand): bool =
   let previousSize = previous.byteSize
   while value.len > 0 and r.rand(bool):
@@ -161,18 +161,7 @@ proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; 
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
-    mutate(x, sizeIncreaseHint, enforceChanges, r)
-  else:
-    if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-      reset(x)
-    else:
-      var res = 0
-      var s: Sampler[int]
-      sample(x, s, r, res)
-      #assert not s.isEmpty
-      res = s.selected
-      pick(x, sizeIncreaseHint, enforceChanges, r, res)
+  mutate(x, sizeIncreaseHint, enforceChanges, r)
 
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
@@ -196,10 +185,11 @@ proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges:
   repeatMutate(mutateValue(value, r))
 
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutateInplace(mutateSeq(value, tmp, sizeIncreaseHint, r))
+  repeatMutateInplace(mutateSeq(value, tmp, high(int), sizeIncreaseHint, r))
 
-proc mutate*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutateInplace(mutateTab(value, tmp, sizeIncreaseHint, r))
+proc mutate*[A, B](value: var (Table[A, B]|OrderedTable[A, B]); sizeIncreaseHint: int;
+    enforceChanges: bool; r: var Rand) =
+  repeatMutateInplace(mutateTab(value, tmp, high(int), sizeIncreaseHint, r))
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)
@@ -241,7 +231,7 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   runMutator(x, sizeIncreaseHint, true, r)
-  runPostProcessor(x, MaxInitializeDepth, r)
+  #runPostProcessor(x, MaxInitializeDepth, r)
 
 template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}

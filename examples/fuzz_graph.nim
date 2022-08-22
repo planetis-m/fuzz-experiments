@@ -57,10 +57,10 @@ when defined(runFuzzTests) and isMainModule:
     repeatMutate(mutateEnum(value.int, MaxNodes, r).NodeIdx)
 
   proc mutate[T](value: var seq[Node[T]]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-    repeatMutate(mutateSeq(value, MaxNodes, sizeIncreaseHint, r))
+    repeatMutateSeq(mutateSeq(value, tmp, MaxNodes, sizeIncreaseHint, r))
 
   proc mutate(value: var seq[NodeIdx]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-    repeatMutate(mutateSeq(value, MaxEdges, sizeIncreaseHint, r))
+    repeatMutateSeq(mutateSeq(value, tmp, MaxEdges, sizeIncreaseHint, r))
 
   #proc postProcess[T: SomeNumber](x: var seq[Node[T]]; r: var Rand) =
     #if x.len >= 8:

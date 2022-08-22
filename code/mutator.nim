@@ -49,26 +49,33 @@ proc mutateEnum*(index, itemCount: int; r: var Rand): int =
 proc newInput*[T](sizeIncreaseHint: int; r: var Rand): T =
   runMutator(result, sizeIncreaseHint, false, r)
 
-proc mutateSeq*[T](value: sink seq[T]; userMax: int; sizeIncreaseHint: int;
-    r: var Rand): seq[T] =
-  result = value
-  let previousSize = result.byteSize
-  while result.len > 0 and r.rand(bool):
-    result.delete(rand(r, result.high))
-  var currentSize = result.byteSize
-  template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
-  while result.len < userMax and remainingSize > 0 and r.rand(bool):
-    let index = rand(r, result.len)
-    result.insert(newInput[T](remainingSize, r), index)
-    currentSize = result.byteSize
-  if result != value:
-    return result
-  if result.len == 0:
-    result.add(newInput[T](remainingSize, r))
-    return result
+template repeatMutateSeq*(call: untyped) =
+  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+    reset(value)
   else:
-    let index = rand(r, result.high)
-    runMutator(result[index], remainingSize, true, r)
+    var tmp {.inject.} = value
+    for i in 1..10:
+      call
+      if not enforceChanges or value != tmp: return
+
+proc mutateSeq*[T](value: var seq[T]; prev: seq[T]; userMax: int; sizeIncreaseHint: int;
+    r: var Rand) =
+  let previousSize = prev.byteSize
+  while value.len > 0 and r.rand(bool):
+    value.delete(rand(r, value.high))
+  var currentSize = value.byteSize
+  template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
+  while value.len < userMax and remainingSize > 0 and r.rand(bool):
+    let index = rand(r, value.len)
+    value.insert(newInput[T](remainingSize, r), index)
+    currentSize = value.byteSize
+  if value != prev:
+    return
+  if value.len == 0:
+    value.add(newInput[T](remainingSize, r))
+  else:
+    let index = rand(r, value.high)
+    runMutator(value[index], remainingSize, true, r)
 
 template sampleAttempt*(call: untyped) =
   inc res
@@ -161,7 +168,7 @@ proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges:
   repeatMutate(mutateValue(value, r))
 
 proc mutate*[T](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateSeq(value, sizeIncreaseHint, r))
+  repeatMutateSeq(mutateSeq(value, tmp, sizeIncreaseHint, r))
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand)
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand)

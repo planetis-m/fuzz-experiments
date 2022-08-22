@@ -238,10 +238,10 @@ proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforce
   repeatMutateInplace(mutateSeq(value, tmp, high(int), sizeIncreaseHint, r))
 
 proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateSeqOfByteSized(value, high(int), sizeIncreaseHint, r))
+  repeatMutate(mutateSeqOfByteSized(move value, high(int), sizeIncreaseHint, r))
 
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateString(value, high(int), sizeIncreaseHint, r))
+  repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
 
 proc runPostProcessor*(x: var bool, depth: int; r: var Rand)
 proc runPostProcessor*(x: var char, depth: int; r: var Rand)

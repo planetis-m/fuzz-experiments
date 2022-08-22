@@ -20,7 +20,7 @@ proc keyAtHidden*[A, B](t: OrderedTable[A, B]; current: int): lent A {.inline.} 
   ## Undocumented API for iteration.
   result = t.data[current].key
 
-proc indexAtHidden*[A, B](t: OrderedTable[A, B]; index: int): int =
+proc positionOfHidden*[A, B](t: OrderedTable[A, B]; index: int): int =
   var index = index
   result = firstPositionHidden(t)
   while index > 0:
@@ -34,24 +34,22 @@ proc mutateTab*[A, B](value: var OrderedTable[A, B]; previous: OrderedTable[A, B
     r: var Rand): bool =
   let previousSize = previous.byteSize
   while value.len > 0 and r.rand(bool):
-    let pos = indexAtHidden(value, rand(r, value.high))
+    let pos = positionOfHidden(value, rand(r, value.high))
     assert pos >= 0
     value.del(value.keyAtHidden(pos))
   var currentSize = value.byteSize
   template remainingSize: untyped = sizeIncreaseHint-currentSize+previousSize
   while value.len < userMax and remainingSize > 0 and r.rand(bool):
     let key = newInput[A](remainingSize, r)
-    currentSize += key.byteSize
-    value[key] = newInput[B](remainingSize, r)
+    value[key] = newInput[B](remainingSize-key.byteSize, r)
     currentSize = value.byteSize
   if value != previous:
     return true
   elif value.len == 0:
     let key = newInput[A](remainingSize, r)
-    currentSize += key.byteSize
-    value[key] = newInput[B](remainingSize, r)
+    value[key] = newInput[B](remainingSize-key.byteSize, r)
   else:
-    let pos = indexAtHidden(value, rand(r, value.high))
+    let pos = positionOfHidden(value, rand(r, value.high))
     assert pos >= 0
     runMutator(value.keyAtHidden(pos), remainingSize, true, r)
   result = value != previous

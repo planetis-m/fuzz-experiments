@@ -1,5 +1,5 @@
-import std/random, common, sampler, macros
-from typetraits import distinctBase, supportsCopyMem
+import std/[random, macros], common, sampler, hashes
+from std/typetraits import distinctBase, supportsCopyMem
 
 when not defined(fuzzSa):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -53,14 +53,14 @@ template repeatMutateSeq*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
     reset(value)
   else:
-    var tmp {.inject.} = value
+    var tmp {.inject.} = if value.len > 0: value.hash else: 0.Hash
     for i in 1..10:
-      call
-      if not enforceChanges or value != tmp: return
+      let newHash = call
+      if not enforceChanges or newHash != tmp: return
 
-proc mutateSeq*[T](value: var seq[T]; prev: seq[T]; userMax: int; sizeIncreaseHint: int;
-    r: var Rand) =
-  let previousSize = prev.byteSize
+proc mutateSeq*[T](value: var seq[T]; previous: Hash; userMax: int; sizeIncreaseHint: int;
+    r: var Rand): Hash =
+  let previousSize = previous.byteSize
   while value.len > 0 and r.rand(bool):
     value.delete(rand(r, value.high))
   var currentSize = value.byteSize
@@ -69,13 +69,16 @@ proc mutateSeq*[T](value: var seq[T]; prev: seq[T]; userMax: int; sizeIncreaseHi
     let index = rand(r, value.len)
     value.insert(newInput[T](remainingSize, r), index)
     currentSize = value.byteSize
-  if value != prev:
-    return
+  result = if value.len > 0: value.hash else: 0.Hash
+  if result != previous:
+    return result
   if value.len == 0:
     value.add(newInput[T](remainingSize, r))
+    result = value.hash
   else:
     let index = rand(r, value.high)
     runMutator(value[index], remainingSize, true, r)
+    result = value.hash
 
 template sampleAttempt*(call: untyped) =
   inc res

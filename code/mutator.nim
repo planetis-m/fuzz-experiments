@@ -17,7 +17,7 @@ const
   MaxInitializeDepth* = 200
 
 type
-  ByteSized = int8|uint8|byte|char
+  ByteSized = int8|uint8|byte|bool|char
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -89,6 +89,8 @@ proc mutateSeqOfByteSized*[T: ByteSized](value: sink seq[T]; userMax, sizeIncrea
     result = value
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
+    when T is bool:
+      for i in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
 
 proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
   if r.rand(0..20) == 0:

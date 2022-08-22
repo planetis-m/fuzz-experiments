@@ -182,6 +182,18 @@ proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
       when not supportsCopyMem(T): reset(x)
     else:
       postProcess(x, r)
+  elif compiles(for v in mitems(x): discard):
+    if depth < 0:
+      when not supportsCopyMem(T): reset(x)
+    else:
+      for v in mitems(x):
+        runPostProcessor(v, depth-1, r)
+  elif compiles(for k, v in mpairs(x): discard):
+    if depth < 0:
+      when not supportsCopyMem(T): reset(x)
+    else:
+      for k, v in mpairs(x):
+        runPostProcessor(v, depth-1, r)
   else:
     runPostProcessor(x.distinctBase, depth-1, r)
 
@@ -206,6 +218,12 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
+    elif compiles(for v in mitems(x): discard):
+      for v in mitems(x):
+        runPostProcessor(v, depth-1, r)
+    elif compiles(for k, v in mpairs(x): discard):
+      for k, v in mpairs(x):
+        runPostProcessor(v, depth-1, r)
     else:
       for v in fields(x):
         runPostProcessor(v, depth-1, r)

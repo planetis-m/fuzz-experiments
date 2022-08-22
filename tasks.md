@@ -53,6 +53,7 @@ DONE after 4/8
 - [X] Correct size hint calculations and minor improvements (1.5h) 21/8
 - [X] See if hashing the seq and comparing with an old hash improves performance. (1.5h) 14/8,22/8 (faster but incorrect hash for 0-len seqs due to openarray, rejected.)
 - [X] Write mutators for tables. Not yet ready for v1. (1h) 22/8
+- [X] Bug: post-processor shouldn't run if there is a mutate function for an object.
 
 TODO
 ====
@@ -61,7 +62,6 @@ TODO
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 - [ ] Add mutator overloads for seq[byte]/string and test them.
-- [ ] Bug: post-processor shouldn't run if there is a mutate function for an object.
 
 MAYBE
 =====

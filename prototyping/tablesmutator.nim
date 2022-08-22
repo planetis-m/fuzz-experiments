@@ -19,11 +19,11 @@ proc nextPositionHidden*[A, B](t: OrderedTable[A, B]; current: int): int =
 proc nextPositionHidden*[A, B](t: Table[A, B]; current: int): int =
   ## Undocumented API for iteration.
   result = current
-  while result <= t.data.high and not isFilled(t.data[result].hcode):
+  while result >= 0 and not isFilled(t.data[result].hcode):
     inc result
+    if result > t.data.high: result = -1
 
 proc positionOfHidden*[A, B](t: OrderedTable[A, B]; index: int): int =
-  assert index < t.len
   var index = index
   result = firstPositionHidden(t)
   while result >= 0 and index > 0:
@@ -31,7 +31,6 @@ proc positionOfHidden*[A, B](t: OrderedTable[A, B]; index: int): int =
     dec index
 
 proc positionOfHidden*[A, B](t: Table[A, B]; index: int): int =
-  assert index < t.len
   var index = index
   result = if t.counter > 0: 0 else: -1
   while result >= 0 and index > 0:

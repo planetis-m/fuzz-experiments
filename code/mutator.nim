@@ -17,7 +17,7 @@ const
   MaxInitializeDepth* = 200
 
 type
-  ByteSized = int8|uint8|byte|bool|char
+  ByteSized = int8|uint8|byte|char
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc mutate*[T: not ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)

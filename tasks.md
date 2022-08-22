@@ -61,6 +61,7 @@ TODO
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 - [ ] Add mutator overloads for seq[byte]/string and test them.
+- [ ] Bug: post-processor shouldn't run if there is a mutate function for an object.
 
 MAYBE
 =====

@@ -24,7 +24,7 @@ proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; 
 proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
-proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
@@ -175,6 +175,13 @@ proc sample[T](x: seq[T]; s: var Sampler; r: var Rand; res: var int) =
 proc sample(x: string; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
+proc sample[T: tuple](x: T; s: var Sampler; r: var Rand; res: var int) =
+  when compiles(mutate(x, 0, false, r)):
+    sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
+  else:
+    for v in fields(x):
+      sample(v, s, r, res)
+
 proc sample[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
   when compiles(mutate(x, 0, false, r)):
     sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
@@ -228,6 +235,14 @@ proc pick(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Ran
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
+proc pick[T: tuple](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
+    pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+  else:
+    for v in fields(x):
+      pick(v, sizeIncreaseHint, enforceChanges, r, res)
+
 proc pick[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
@@ -272,7 +287,7 @@ proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
-proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+proc runMutator*[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     mutate(x, sizeIncreaseHint, enforceChanges, r)
   else:
@@ -365,7 +380,7 @@ proc runPostProcessor*(x: var string, depth: int; r: var Rand) =
       for i in 0..<x.len:
         runPostProcessor(x[i], depth-1, r)
 
-proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
+proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
   if depth < 0:
     when not supportsCopyMem(T): reset(x)
   else:

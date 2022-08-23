@@ -2,7 +2,7 @@ import mutator
 
 type
   Foo = object
-    a: int
+    a: string
     case kind: bool
     of true:
       b: string
@@ -10,7 +10,7 @@ type
       c: int
 
 func fuzzTarget(x: Foo) =
-  if x.kind and x.a == 1 and x.b.len == 100:
+  if x.a.len == 50 and x.kind and x.b.len == 100:
     doAssert false
 
 defaultMutator(fuzzTarget)

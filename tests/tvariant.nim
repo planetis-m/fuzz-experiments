@@ -1,4 +1,4 @@
-# Should not leak, crash or the address sanitizer complain.
+# Should not leak, crash or the address sanitizer complain. Is the dictionary limit ~64bytes?
 import mutator, random
 
 type

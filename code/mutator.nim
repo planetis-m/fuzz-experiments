@@ -1,4 +1,4 @@
-import std/[random, macros], common, sampler
+import std/[random, macros], common, sampler, utf8fix
 from typetraits import distinctBase, supportsCopyMem
 
 when not defined(fuzzerStandalone):
@@ -98,6 +98,10 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
 
+proc mutateUtf8String*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
+  result = mutateString(value, userMax, sizeIncreaseHint, r)
+  fixUtf8(result, r)
+
 proc mutateArray*[S, T](value: array[S, T]; r: var Rand): array[S, T] {.inline.} =
   result = mutateValue(value, r)
   when T is bool:
@@ -137,7 +141,10 @@ proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChan
   repeatMutate(mutateByteSizedSeq(move value, high(int), sizeIncreaseHint, r))
 
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
+  when defined(fuzzerUtf8Strings):
+    repeatMutate(mutateUtf8String(move value, high(int), sizeIncreaseHint, r))
+  else:
+    repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
 
 proc mutate*[S; T: SomeNumber|bool|char](value: var array[S, T]; sizeIncreaseHint: int;
     enforceChanges: bool; r: var Rand) =

@@ -228,14 +228,82 @@ proc pick(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Ran
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick[T: tuple](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
   else:
     for v in fields(x):
-      {.cast(uncheckedAssign).}:
-        pick(v, sizeIncreaseHint, enforceChanges, r, res)
+      pick(v, sizeIncreaseHint, enforceChanges, r, res)
+
+template getFieldValue(sizeIncreaseHint, enforceChanges, r, res, tmpSym, fieldSym) =
+  pick(tmpSym.fieldSym, sizeIncreaseHint, enforceChanges, r, res)
+
+template getKindValue(sizeIncreaseHint, enforceChanges, r, res, tmpSym, kindSym) =
+  {.cast(uncheckedAssign).}:
+    pick(tmpSym.kindSym, sizeIncreaseHint, enforceChanges, r, res)
+
+proc foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, typeNode: NimNode): NimNode =
+  case typeNode.kind
+  of nnkEmpty:
+    result = newNimNode(nnkNone)
+  of nnkRecList:
+    result = newStmtList()
+    for it in typeNode:
+      let x = foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, it)
+      if x.kind != nnkNone: result.add x
+  of nnkIdentDefs:
+    expectLen(typeNode, 3)
+    let fieldSym = typeNode[0]
+    result = getAst(getFieldValue(sizeIncreaseHint, enforceChanges, r, res, tmpSym, fieldSym))
+  of nnkRecCase:
+    let kindSym = typeNode[0][0]
+    result = newStmtList(getAst(getKindValue(sizeIncreaseHint, enforceChanges, r, res, tmpSym, kindSym)))
+    let inner = nnkCaseStmt.newTree(nnkDotExpr.newTree(tmpSym, kindSym))
+    for i in 1..<typeNode.len:
+      let x = foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, typeNode[i])
+      if x.kind != nnkNone: inner.add x
+    result.add inner
+  of nnkOfBranch, nnkElse:
+    result = copyNimNode(typeNode)
+    for i in 0..typeNode.len-2:
+      result.add copyNimTree(typeNode[i])
+    let inner = newNimNode(nnkStmtListExpr)
+    let x = foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, typeNode[^1])
+    if x.kind != nnkNone: inner.add x
+    result.add inner
+  of nnkObjectTy:
+    expectKind(typeNode[0], nnkEmpty)
+    expectKind(typeNode[1], {nnkEmpty, nnkOfInherit})
+    result = newNimNode(nnkNone)
+    if typeNode[1].kind == nnkOfInherit:
+      let base = typeNode[1][0]
+      var impl = getTypeImpl(base)
+      while impl.kind in {nnkRefTy, nnkPtrTy}:
+        impl = getTypeImpl(impl[0])
+      result = foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, impl)
+    let body = typeNode[2]
+    let x = foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, body)
+    if result.kind != nnkNone:
+      if x.kind != nnkNone:
+        for i in 0..<result.len: x.add(result[i])
+        result = x
+    else: result = x
+  else:
+    error("unhandled kind: " & $typeNode.kind, typeNode)
+
+macro assignObjectImpl(sizeIncreaseHint, enforceChanges, r, res, output: typed): untyped =
+  let typeSym = getTypeInst(output)
+  result = newStmtList()
+  let x = foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, output, typeSym.getTypeImpl)
+  if x.kind != nnkNone: result.add x
+
+proc pick[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
+    pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+  else:
+    assignObjectImpl(sizeIncreaseHint, enforceChanges, r, res, x)
 
 proc pick[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =

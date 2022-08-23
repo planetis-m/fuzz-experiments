@@ -134,6 +134,9 @@ proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChan
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
 
+proc mutate*[S; T: SomeNumber|char](value: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateValue(value, r))
+
 template sampleAttempt(call: untyped) =
   inc res
   call

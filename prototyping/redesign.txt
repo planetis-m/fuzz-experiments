@@ -1,0 +1,9 @@
+Mutation is a distinct int and every mutator specifies its own set of values
+i.e a seq mutator has SeqGrow, SeqShrink, SeqAdd, SeqDelete, SeqSwap, SeqCrossover.
+The function signature is proc (x: var T; m: Mutation; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand): bool
+The sampler is passed a (mutation, int (position)) tuple and a weight (0-100) for each possible mutation (canGrow bool).
+
+Pro: Faster mutations (one less copy of the selected item), verified by a previous prototype.
+Pro: Easier to calculate sizeIncreaseHint inside mutator?!
+Con: Could produce twice as many duplicates.
+

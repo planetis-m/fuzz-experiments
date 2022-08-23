@@ -25,6 +25,8 @@ proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 
 proc flipBit*(bytes: ptr UncheckedArray[byte]; len: int; r: var Rand) =
   ## Flips random bit in the buffer.
@@ -98,7 +100,7 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
 
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
+    discard
   else:
     var tmp = value
     for i in 1..10:
@@ -107,7 +109,7 @@ template repeatMutate*(call: untyped) =
 
 template repeatMutateInplace*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-    reset(value)
+    discard
   else:
     var tmp {.inject.} = value
     for i in 1..10:
@@ -164,6 +166,19 @@ proc sample[T: object](x: T; s: var Sampler; r: var Rand; res: var int) =
     for v in fields(x):
       sample(v, s, r, res)
 
+proc sample[T](x: ref T; s: var Sampler; r: var Rand; res: var int) =
+  when compiles(mutate(x, 0, false, r)):
+    sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
+  else:
+    if x != nil: sample(x[], s, r, res)
+
+proc sample[S, T](x: array[S, T]; s: var Sampler; r: var Rand; res: var int) =
+  when compiles(mutate(x, 0, false, r)):
+    sampleAttempt(attempt(x, r, DefaultMutateWeight, res))
+  else:
+    for i in low(x)..high(x):
+      sample(x[i], s, r, res)
+
 template pickMutate(call: untyped) =
   if res > 0:
     dec res
@@ -205,6 +220,21 @@ proc pick[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     for v in fields(x):
       pick(v, sizeIncreaseHint, enforceChanges, r, res)
 
+proc pick[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
+    pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+  else:
+    if x != nil: pick(x[], sizeIncreaseHint, enforceChanges, r, res)
+
+proc pick[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
+    pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+  else:
+    for i in low(x)..high(x):
+      pick(x[i], sizeIncreaseHint, enforceChanges, r, res)
+
 proc runMutator*[T: distinct](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     mutate(x, sizeIncreaseHint, enforceChanges, r)
@@ -231,7 +261,30 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: boo
     mutate(x, sizeIncreaseHint, enforceChanges, r)
   else:
     if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
-      reset(x)
+      discard
+    else:
+      var res = 0
+      var s: Sampler[int]
+      sample(x, s, r, res)
+      #assert not s.isEmpty
+      res = s.selected
+      pick(x, sizeIncreaseHint, enforceChanges, r, res)
+
+proc runMutator*[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
+    mutate(x, sizeIncreaseHint, enforceChanges, r)
+  else:
+    if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+      discard
+    else:
+      if x != nil: runMutator(x[], sizeIncreaseHint, enforceChanges, r)
+
+proc runMutator*[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
+    mutate(x, sizeIncreaseHint, enforceChanges, r)
+  else:
+    if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+      discard
     else:
       var res = 0
       var s: Sampler[int]
@@ -315,6 +368,25 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
     else:
       for v in fields(x):
         runPostProcessor(v, depth-1, r)
+
+proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =
+  if depth < 0:
+    reset(x)
+  else:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+    else:
+      if x != nil: runPostProcessor(x[], depth-1, r)
+
+proc runPostProcessor*[S, T](x: var array[S, T], depth: int; r: var Rand) =
+  if depth < 0:
+    reset(x)
+  else:
+    when compiles(postProcess(x, r)):
+      postProcess(x, r)
+    else:
+      for i in low(x)..high(x):
+        runPostProcessor(x[i], depth-1, r)
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   runMutator(x, sizeIncreaseHint, true, r)

@@ -63,13 +63,13 @@ TODO
 - [ ] Write a macro for supporting variant objects/tuples.
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
-- [ ] Do we really need the sampler?
+- [ ] Do we really need the sampler? Is there a way to adjust the weights based on what was previously selected?
 
 MAYBE
 =====
 
 - [ ] Step though LPM graph example to understand how it handles nested messages mutation.
-- [ ] Experiment with mutate having dest and source parameters, might fix performance issue and allow crossover. (this is a good idea.)
+- [ ] Experiment with mutate having dest and source parameters, allow crossover. (this is a good idea.)
 - [ ] Experiment with the idea of trying to mutate everything at once. (might not work well)
 - [ ] See if the original graph mutator performs any better than the 'dumb' one. (sure it does.)
 

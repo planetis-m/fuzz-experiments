@@ -2,8 +2,72 @@
 # mutator is in control of the process, there should be no errors. And if there are, they
 # should be fatal and the code should be fixed. User may also run the fuzzer without any
 # sanitizer, which means that errors should always be detected.
-import std/[options, tables, sets]
+import std/[options, tables, sets, macros]
 from typetraits import supportsCopyMem, distinctBase
+
+template getFieldValue(mFunc, tmpSym, fieldSym) =
+  mFunc(tmpSym.fieldSym)
+
+template getKindValue(mFunc, tmpSym, kindSym) =
+  var kindTmp = tmpSym.kindSym
+  mFunc(kindTmp)
+  {.cast(uncheckedAssign).}:
+    tmpSym.kindSym = kindTmp
+
+proc foldObjectBody(tmpSym, typeNode, mFunc: NimNode): NimNode =
+  case typeNode.kind
+  of nnkEmpty:
+    result = newNimNode(nnkNone)
+  of nnkRecList:
+    result = newStmtList()
+    for it in typeNode:
+      let x = foldObjectBody(tmpSym, it, mFunc)
+      if x.kind != nnkNone: result.add x
+  of nnkIdentDefs:
+    expectLen(typeNode, 3)
+    let fieldSym = typeNode[0]
+    result = getAst(getFieldValue(mFunc, tmpSym, fieldSym))
+  of nnkRecCase:
+    let kindSym = typeNode[0][0]
+    result = newStmtList(getAst(getKindValue(mFunc, tmpSym, kindSym)))
+    let inner = nnkCaseStmt.newTree(nnkDotExpr.newTree(tmpSym, kindSym))
+    for i in 1..<typeNode.len:
+      let x = foldObjectBody(tmpSym, typeNode[i], mFunc)
+      if x.kind != nnkNone: inner.add x
+    result.add inner
+  of nnkOfBranch, nnkElse:
+    result = copyNimNode(typeNode)
+    for i in 0..typeNode.len-2:
+      result.add copyNimTree(typeNode[i])
+    let inner = newNimNode(nnkStmtListExpr)
+    let x = foldObjectBody(tmpSym, typeNode[^1], mFunc)
+    if x.kind != nnkNone: inner.add x
+    result.add inner
+  of nnkObjectTy:
+    expectKind(typeNode[0], nnkEmpty)
+    expectKind(typeNode[1], {nnkEmpty, nnkOfInherit})
+    result = newNimNode(nnkNone)
+    if typeNode[1].kind == nnkOfInherit:
+      let base = typeNode[1][0]
+      var impl = getTypeImpl(base)
+      while impl.kind in {nnkRefTy, nnkPtrTy}:
+        impl = getTypeImpl(impl[0])
+      result = foldObjectBody(tmpSym, impl, mFunc)
+    let body = typeNode[2]
+    let x = foldObjectBody(tmpSym, body, mFunc)
+    if result.kind != nnkNone:
+      if x.kind != nnkNone:
+        for i in 0..<result.len: x.add(result[i])
+        result = x
+    else: result = x
+  else:
+    error("unhandled kind: " & $typeNode.kind, typeNode)
+
+macro assignObjectImpl*(output: typed; mFunc: untyped): untyped =
+  let typeSym = getTypeInst(output)
+  result = newStmtList()
+  let x = foldObjectBody(output, typeSym.getTypeImpl, mFunc)
+  if x.kind != nnkNone: result.add x
 
 type
   EncodingDefect = object of Defect
@@ -286,13 +350,13 @@ proc fromData*[T: tuple](data: openArray[byte]; pos: var int; output: var T) =
     for v in output.fields:
       fromData(data, pos, v)
 
-proc fromData*[T: object](data: openArray[byte]; pos: var int; output: var T) =
+proc fromData*[T: object](data: openArray[byte]; pos: var int; output: var T) {.nodestroy.} =
   when supportsCopyMem(T):
     read(data, pos, output)
   else:
-    for v in output.fields:
-      {.cast(uncheckedAssign).}:
-        fromData(data, pos, v)
+    template fromDataFunc(x: untyped) =
+      fromData(data, pos, x)
+    assignObjectImpl(output, fromDataFunc)
 
 proc toData*[T: distinct](data: var openArray[byte]; pos: var int; input: T) {.inline.} =
   toData(data, pos, input.distinctBase)

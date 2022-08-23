@@ -58,6 +58,7 @@ DONE after 4/8
 - [X] Missing: refs/arrays. (0.75h) 23/8
 - [X] Plug-in utf8 strings (compile-time switch). 23/8
 - [X] Write a macro for supporting variant objects/tuples. (2.5h+) 23/8
+- [X] Replace runPost fields() with macro. (0.50h) 23/8
 
 TODO
 ====
@@ -65,7 +66,6 @@ TODO
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 - [ ] Optimize out runPostProcessor for data-structures.
-- [ ] Replace runPost fields() with macro.
 
 MAYBE
 =====

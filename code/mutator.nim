@@ -236,70 +236,6 @@ proc pick[T: tuple](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     for v in fields(x):
       pick(v, sizeIncreaseHint, enforceChanges, r, res)
 
-template getFieldValue(mFunc, tmpSym, fieldSym) =
-  mFunc(tmpSym.fieldSym)
-
-template getKindValue(mFunc, tmpSym, kindSym) =
-  var kindTmp = tmpSym.kindSym
-  mFunc(kindTmp)
-  {.cast(uncheckedAssign).}:
-    tmpSym.kindSym = kindTmp
-
-proc foldObjectBody(tmpSym, typeNode, mFunc: NimNode): NimNode =
-  case typeNode.kind
-  of nnkEmpty:
-    result = newNimNode(nnkNone)
-  of nnkRecList:
-    result = newStmtList()
-    for it in typeNode:
-      let x = foldObjectBody(tmpSym, it, mFunc)
-      if x.kind != nnkNone: result.add x
-  of nnkIdentDefs:
-    expectLen(typeNode, 3)
-    let fieldSym = typeNode[0]
-    result = getAst(getFieldValue(mFunc, tmpSym, fieldSym))
-  of nnkRecCase:
-    let kindSym = typeNode[0][0]
-    result = newStmtList(getAst(getKindValue(mFunc, tmpSym, kindSym)))
-    let inner = nnkCaseStmt.newTree(nnkDotExpr.newTree(tmpSym, kindSym))
-    for i in 1..<typeNode.len:
-      let x = foldObjectBody(tmpSym, typeNode[i], mFunc)
-      if x.kind != nnkNone: inner.add x
-    result.add inner
-  of nnkOfBranch, nnkElse:
-    result = copyNimNode(typeNode)
-    for i in 0..typeNode.len-2:
-      result.add copyNimTree(typeNode[i])
-    let inner = newNimNode(nnkStmtListExpr)
-    let x = foldObjectBody(tmpSym, typeNode[^1], mFunc)
-    if x.kind != nnkNone: inner.add x
-    result.add inner
-  of nnkObjectTy:
-    expectKind(typeNode[0], nnkEmpty)
-    expectKind(typeNode[1], {nnkEmpty, nnkOfInherit})
-    result = newNimNode(nnkNone)
-    if typeNode[1].kind == nnkOfInherit:
-      let base = typeNode[1][0]
-      var impl = getTypeImpl(base)
-      while impl.kind in {nnkRefTy, nnkPtrTy}:
-        impl = getTypeImpl(impl[0])
-      result = foldObjectBody(tmpSym, impl, mFunc)
-    let body = typeNode[2]
-    let x = foldObjectBody(tmpSym, body, mFunc)
-    if result.kind != nnkNone:
-      if x.kind != nnkNone:
-        for i in 0..<result.len: x.add(result[i])
-        result = x
-    else: result = x
-  else:
-    error("unhandled kind: " & $typeNode.kind, typeNode)
-
-macro assignObjectImpl(output: typed; mFunc: untyped): untyped =
-  let typeSym = getTypeInst(output)
-  result = newStmtList()
-  let x = foldObjectBody(output, typeSym.getTypeImpl, mFunc)
-  if x.kind != nnkNone: result.add x
-
 proc pick[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
@@ -454,9 +390,9 @@ proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
         for k, v in mpairs(x):
           runPostProcessor(v, depth-1, r)
     else:
-      for v in fields(x):
-        {.cast(uncheckedAssign).}: # todo replace with macro.
-          runPostProcessor(v, depth-1, r)
+      template runPostFunc(x: untyped) =
+        runPostProcessor(x, depth-1, r)
+      assignObjectImpl(x, runPostFunc)
 
 proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =
   if depth < 0:

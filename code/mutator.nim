@@ -407,7 +407,7 @@ proc runPostProcessor*[S, T](x: var array[S, T], depth: int; r: var Rand) =
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   runMutator(x, sizeIncreaseHint, true, r)
-  runPostProcessor(x, MaxInitializeDepth, r)
+  #runPostProcessor(x, MaxInitializeDepth, r)
 
 template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
@@ -454,6 +454,7 @@ template mutatorImpl(target, mutator, typ: untyped) =
       x = move getInput(x, data)
     FuzzMutator(mutator)(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
+    doAssert result > 0
     if result <= maxLen:
       setInput(x, data, result)
     else:

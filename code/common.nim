@@ -286,7 +286,7 @@ proc fromData*[T: tuple](data: openArray[byte]; pos: var int; output: var T) =
     for v in output.fields:
       fromData(data, pos, v)
 
-proc fromData*[T: object](data: openArray[byte]; pos: var int; output: var T) {.nodestroy.} =
+proc fromData*[T: object](data: openArray[byte]; pos: var int; output: var T) =
   when supportsCopyMem(T):
     read(data, pos, output)
   else:

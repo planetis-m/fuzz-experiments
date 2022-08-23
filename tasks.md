@@ -57,11 +57,11 @@ DONE after 4/8
 - [X] Add mutator overloads for seq[byte]/string and test them. (6.5h) 22/8
 - [X] Missing: refs/arrays. (0.75h) 23/8
 - [X] Plug-in utf8 strings (compile-time switch). 23/8
+- [X] Write a macro for supporting variant objects/tuples. (2.5h+) 23/8
 
 TODO
 ====
 
-- [ ] Write a macro for supporting variant objects/tuples. (1.0h+) 23/8
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 

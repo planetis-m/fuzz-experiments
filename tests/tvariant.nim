@@ -10,7 +10,7 @@ type
       c: int
 
 func fuzzTarget(x: Foo) =
-  if x.kind and x.a == 1 and x.c == 2:
+  if x.kind and x.a == 1 and x.b.len == 100:
     doAssert false
 
 defaultMutator(fuzzTarget)

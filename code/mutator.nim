@@ -228,21 +228,14 @@ proc pick(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Ran
     res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
-proc pick[T: tuple](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+proc pick[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
   else:
     for v in fields(x):
-      pick(v, sizeIncreaseHint, enforceChanges, r, res)
-
-proc pick[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
-    r: var Rand; res: var int) =
-  when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
-    pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
-  else:
-    for v in fields(x):
-      pick(v, sizeIncreaseHint, enforceChanges, r, res)
+      {.cast(uncheckedAssign).}:
+        pick(v, sizeIncreaseHint, enforceChanges, r, res)
 
 proc pick[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
@@ -390,7 +383,8 @@ proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
           runPostProcessor(v, depth-1, r)
     else:
       for v in fields(x):
-        runPostProcessor(v, depth-1, r)
+        {.cast(uncheckedAssign).}:
+          runPostProcessor(v, depth-1, r)
 
 proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =
   if depth < 0:

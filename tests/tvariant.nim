@@ -14,8 +14,7 @@ proc postProcess(x: var bool; r: var Rand) =
   x = true
 
 func fuzzTarget(x: Foo) =
-  if x.a == "I'm going to the one place that hasn't been corrupted by Capitalism." and
-      x.kind and x.b == "Space!":
+  if x.a == "The one place that hasn't been corrupted by Capitalism." and x.kind and x.b == "Space!":
     doAssert false
 
 defaultMutator(fuzzTarget)

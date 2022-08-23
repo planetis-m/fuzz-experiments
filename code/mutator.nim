@@ -11,13 +11,6 @@ when not defined(fuzzerStandalone):
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
-import std/math
-export isPowerOfTwo
-var
-  chosen = 0
-  step = 0
-  total = 0
-
 const
   RandomToDefaultRatio* = 100
   DefaultMutateWeight* = 1_000_000
@@ -133,7 +126,6 @@ template repeatMutateInplace*(call: untyped) =
       if not enforceChanges or notEqual: return
 
 proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  inc chosen
   value = not value
 
 proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
@@ -460,9 +452,6 @@ template mutatorImpl(target, mutator, typ: untyped) =
     if data.len > 1: # Ignore '\n' passed by LibFuzzer.
       try:
         FuzzTarget(target)(getInput(x, data))
-        inc step
-        if step.isPowerOfTwo():
-          echo "Object case transition: ", chosen/total*100
       finally:
         # Call Nim's compiler api to report unhandled exceptions.
         {.emit: "nimTestErrorFlag();".}
@@ -473,7 +462,6 @@ template mutatorImpl(target, mutator, typ: untyped) =
       x = move getInput(x, data)
     FuzzMutator(mutator)(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
-    inc total
     if result <= maxLen:
       setInput(x, data, result)
     else:

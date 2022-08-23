@@ -453,7 +453,7 @@ proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
           runPostProcessor(v, depth-1, r)
     else:
       for v in fields(x):
-        {.cast(uncheckedAssign).}:
+        {.cast(uncheckedAssign).}: # todo replace with macro.
           runPostProcessor(v, depth-1, r)
 
 proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =

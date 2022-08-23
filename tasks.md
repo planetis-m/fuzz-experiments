@@ -65,6 +65,7 @@ TODO
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 - [ ] Optimize out runPostProcessor for data-structures.
+- [ ] Replace runPost fields() with macro.
 
 MAYBE
 =====

@@ -55,7 +55,7 @@ DONE after 4/8
 - [X] Write mutators for tables. Not yet ready for v1. 22/8
 - [X] Bug: post-processor shouldn't run if there is a mutate function for an object. 22/8
 - [X] Add mutator overloads for seq[byte]/string and test them. (6.5h) 22/8
-- [X] Missing: refs/arrays. (0.5h) 23/8
+- [X] Missing: refs/arrays. (0.75h) 23/8
 
 TODO
 ====
@@ -64,7 +64,6 @@ TODO
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 - [ ] Do we really need the sampler?
-- [ ] array of bool, enum, set
 
 MAYBE
 =====

@@ -98,6 +98,11 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
 
+proc mutateArray*[S, T](value: array[S, T]; r: var Rand): array[S, T] =
+  result = mutateValue(value, r)
+  when T is bool:
+    for i in low(result)..high(result): result[i] = cast[array[S, byte]](result)[i] != 0.byte
+
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
     discard
@@ -134,8 +139,9 @@ proc mutate*[T: ByteSized](value: var seq[T]; sizeIncreaseHint: int; enforceChan
 proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateString(move value, high(int), sizeIncreaseHint, r))
 
-proc mutate*[S; T: SomeNumber|char](value: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(mutateValue(value, r))
+proc mutate*[S; T: SomeNumber|bool|char](value: var array[S, T]; sizeIncreaseHint: int;
+    enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateArray(value, r))
 
 template sampleAttempt(call: untyped) =
   inc res

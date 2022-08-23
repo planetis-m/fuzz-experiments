@@ -1,4 +1,5 @@
-import mutator
+# Should not leak, crash or the address sanitizer complain.
+import mutator, random
 
 type
   Foo = object
@@ -9,8 +10,12 @@ type
     else:
       c: int
 
+proc postProcess(x: var bool; r: var Rand) =
+  x = true
+
 func fuzzTarget(x: Foo) =
-  if x.a.len == 50 and x.kind and x.b.len == 100:
+  if x.a == "I'm going to the one place that hasn't been corrupted by Capitalism." and
+      x.kind and x.b == "Space!":
     doAssert false
 
 defaultMutator(fuzzTarget)

@@ -60,10 +60,11 @@ DONE after 4/8
 TODO
 ====
 
-- [ ] Write a macro for supporting variant objects/tuples.
+- [ ] Write a macro for supporting variant objects/tuples. (1.0h+) 23/8
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
 - [ ] Do we really need the sampler? Is there a way to adjust the weights based on what was previously selected?
+- [ ] Plug-in utf8 strings (compile-time switch).
 
 MAYBE
 =====

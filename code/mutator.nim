@@ -13,7 +13,7 @@ template `+!`(p: pointer, s: int): untyped =
 
 const
   RandomToDefaultRatio* = 100
-  DefaultMutateWeight* = 1000000
+  DefaultMutateWeight* = 1_000_000
   MaxInitializeDepth* = 200
 
 type
@@ -98,7 +98,7 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
 
-proc mutateArray*[S, T](value: array[S, T]; r: var Rand): array[S, T] =
+proc mutateArray*[S, T](value: array[S, T]; r: var Rand): array[S, T] {.inline.} =
   result = mutateValue(value, r)
   when T is bool:
     for i in low(result)..high(result): result[i] = cast[array[S, byte]](result)[i] != 0.byte
@@ -275,7 +275,6 @@ proc runMutator*[T: object](x: var T; sizeIncreaseHint: int; enforceChanges: boo
       var res = 0
       var s: Sampler[int]
       sample(x, s, r, res)
-      #assert not s.isEmpty
       res = s.selected
       pick(x, sizeIncreaseHint, enforceChanges, r, res)
 
@@ -299,7 +298,6 @@ proc runMutator*[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges
       var res = 0
       var s: Sampler[int]
       sample(x, s, r, res)
-      #assert not s.isEmpty
       res = s.selected
       pick(x, sizeIncreaseHint, enforceChanges, r, res)
 

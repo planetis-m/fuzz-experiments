@@ -240,8 +240,10 @@ template getFieldValue(sizeIncreaseHint, enforceChanges, r, res, tmpSym, fieldSy
   pick(tmpSym.fieldSym, sizeIncreaseHint, enforceChanges, r, res)
 
 template getKindValue(sizeIncreaseHint, enforceChanges, r, res, tmpSym, kindSym) =
+  var kindTmp = tmpSym.kindSym
+  pick(kindTmp, sizeIncreaseHint, enforceChanges, r, res)
   {.cast(uncheckedAssign).}:
-    pick(tmpSym.kindSym, sizeIncreaseHint, enforceChanges, r, res)
+    tmpSym.kindSym = kindTmp
 
 proc foldObjectBody(sizeIncreaseHint, enforceChanges, r, res, tmpSym, typeNode: NimNode): NimNode =
   case typeNode.kind

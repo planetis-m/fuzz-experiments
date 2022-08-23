@@ -402,18 +402,18 @@ proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
     runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*(x: var bool, depth: int; r: var Rand) =
-  if depth >= 0:
-    when compiles(postProcess(x, r)):
+  when compiles(postProcess(x, r)):
+    if depth >= 0:
       postProcess(x, r)
 
 proc runPostProcessor*(x: var char, depth: int; r: var Rand) =
-  if depth >= 0:
-    when compiles(postProcess(x, r)):
+  when compiles(postProcess(x, r)):
+    if depth >= 0:
       postProcess(x, r)
 
 proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
-  if depth >= 0:
-    when compiles(postProcess(x, r)):
+  when compiles(postProcess(x, r)):
+    if depth >= 0:
       postProcess(x, r)
 
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
@@ -477,7 +477,7 @@ proc runPostProcessor*[S, T](x: var array[S, T], depth: int; r: var Rand) =
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   runMutator(x, sizeIncreaseHint, true, r)
-  #runPostProcessor(x, MaxInitializeDepth, r)
+  runPostProcessor(x, MaxInitializeDepth, r)
 
 template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}
@@ -524,7 +524,6 @@ template mutatorImpl(target, mutator, typ: untyped) =
       x = move getInput(x, data)
     FuzzMutator(mutator)(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
-    doAssert result > 0
     if result <= maxLen:
       setInput(x, data, result)
     else:

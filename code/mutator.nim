@@ -277,7 +277,8 @@ proc runMutator*[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool; r
     if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
       discard
     else:
-      if x != nil: runMutator(x[], sizeIncreaseHint, enforceChanges, r)
+      new(x)
+      runMutator(x[], sizeIncreaseHint, enforceChanges, r)
 
 proc runMutator*[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):

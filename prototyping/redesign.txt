@@ -7,3 +7,7 @@ Pro: Faster mutations (one less copy of the selected item), verified by a previo
 Pro: Easier to calculate sizeIncreaseHint inside mutator?!
 Pro/Con: You now have to provide a list with the mutations and the weights for each.
 Con: Could produce twice as many duplicates.
+
+Ideas:
+- Make the post-processor work only for objects/seq/string/set.
+- Assign smaller weight for mutating the discriminator field.

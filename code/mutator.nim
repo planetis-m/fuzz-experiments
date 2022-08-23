@@ -98,7 +98,7 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
     result.setLen(max(1, oldSize + sizeIncreaseHint))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
 
-proc mutateUtf8String*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
+proc mutateUtf8String*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string {.inline.} =
   result = mutateString(value, userMax, sizeIncreaseHint, r)
   fixUtf8(result, r)
 

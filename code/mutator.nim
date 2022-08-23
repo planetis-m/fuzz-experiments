@@ -1,7 +1,7 @@
 import std/[random, macros], common, sampler
 from typetraits import distinctBase, supportsCopyMem
 
-when not defined(fuzzSa):
+when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
 
@@ -36,7 +36,7 @@ proc flipBit*[T](value: T; r: var Rand): T =
   result = value
   flipBit(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), r)
 
-when not defined(fuzzSa):
+when not defined(fuzzerStandalone):
   proc mutateValue*[T](value: T; r: var Rand): T =
     result = value
     let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
@@ -303,7 +303,7 @@ proc runPostProcessor*[T: object](x: var T, depth: int; r: var Rand) =
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
-    # When there is a user provided mutator, don't touch private fields
+    # When there is a user-provided mutator, don't touch private fields.
     elif compiles(mutate(x, 0, false, r)):
       # Guess how to traverse a data structure, if it's even one.
       when compiles(for v in mitems(x): discard):

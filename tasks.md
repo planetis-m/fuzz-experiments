@@ -62,7 +62,7 @@ TODO
 - [ ] Write a macro for supporting variant objects.
 - [ ] Safe enum/range mutator, needs a macro (try to reuse rank from enumutils). (1h)
 - [ ] Write some docs and a ref example.
-- [ ] Missing: refs/tuples.
+- [ ] Missing: refs/tuples/arrays.
 
 MAYBE
 =====

@@ -79,13 +79,12 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
 
 proc mutateByteSizedSeq*[T: ByteSized and not range](value: sink seq[T]; userMax, sizeIncreaseHint: int;
     r: var Rand): seq[T] =
-  # This seq mutator uses more memory than the default one.
   if r.rand(0..20) == 0:
     result = @[]
   else:
     let oldSize = value.len
     result = value
-    result.setLen(max(1, oldSize + sizeIncreaseHint))
+    result.setLen(max(1, oldSize + r.rand(sizeIncreaseHint)))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
     when T is bool:
       # Fix bool values so UBSan stops complaining.

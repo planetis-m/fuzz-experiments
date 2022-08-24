@@ -17,7 +17,8 @@ const
   MaxInitializeDepth* = 200
 
 type
-  ByteSized = int8|uint8|byte|bool|char
+  ByteSized* = int8|uint8|byte|bool|char
+  PostProcessTypes* = (object|tuple|ref|seq|string|array|set|distinct)
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -87,7 +88,7 @@ proc mutateByteSizedSeq*[T: ByteSized](value: sink seq[T]; userMax, sizeIncrease
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
     when T is bool:
       # Fix bool values so UBSan stops complaining.
-      for x in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
+      for i in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
 
 proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
   if r.rand(0..20) == 0:
@@ -318,41 +319,15 @@ proc runMutator*[S, T](x: var array[S, T]; sizeIncreaseHint: int; enforceChanges
       pick(x, sizeIncreaseHint, enforceChanges, r, res)
 
 proc runPostProcessor*[T: distinct](x: var T, depth: int; r: var Rand) =
+  # Allow post-processor functions for all distinct types.
   when compiles(postProcess(x, r)):
     if depth < 0:
       when not supportsCopyMem(T): reset(x)
     else:
       postProcess(x, r)
-  elif compiles(mutate(x, 0, false, r)):
-    when compiles(for v in mitems(x): discard):
-      if depth < 0:
-        when not supportsCopyMem(T): reset(x)
-      else:
-        for v in mitems(x):
-          runPostProcessor(v, depth-1, r)
-    elif compiles(for k, v in mpairs(x): discard):
-      if depth < 0:
-        when not supportsCopyMem(T): reset(x)
-      else:
-        for k, v in mpairs(x):
-          runPostProcessor(v, depth-1, r)
   else:
-    runPostProcessor(x.distinctBase, depth-1, r)
-
-proc runPostProcessor*(x: var bool, depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    if depth >= 0:
-      postProcess(x, r)
-
-proc runPostProcessor*(x: var char, depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    if depth >= 0:
-      postProcess(x, r)
-
-proc runPostProcessor*[T: SomeNumber](x: var T, depth: int; r: var Rand) =
-  when compiles(postProcess(x, r)):
-    if depth >= 0:
-      postProcess(x, r)
+    when x.distinctBase is PostProcessTypes:
+      runPostProcessor(x.distinctBase, depth-1, r)
 
 proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
   if depth < 0:
@@ -361,8 +336,9 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
     when compiles(postProcess(x, r)):
       postProcess(x, r)
     else:
-      for i in 0..<x.len:
-        runPostProcessor(x[i], depth-1, r)
+      when T is PostProcessTypes:
+        for i in 0..<x.len:
+          runPostProcessor(x[i], depth-1, r)
 
 proc runPostProcessor*(x: var string, depth: int; r: var Rand) =
   if depth < 0:
@@ -370,9 +346,6 @@ proc runPostProcessor*(x: var string, depth: int; r: var Rand) =
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
-    else:
-      for i in 0..<x.len:
-        runPostProcessor(x[i], depth-1, r)
 
 proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
   if depth < 0:
@@ -384,15 +357,18 @@ proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
     elif compiles(mutate(x, 0, false, r)):
       # Guess how to traverse a data structure, if it's even one.
       when compiles(for v in mitems(x): discard):
-        for v in mitems(x):
-          runPostProcessor(v, depth-1, r)
+        # Run the post-processor only for compatible types as there is an overhead.
+        when typeof(for v in mitems(x): v) is PostProcessTypes:
+          for v in mitems(x):
+            runPostProcessor(v, depth-1, r)
       elif compiles(for k, v in mpairs(x): discard):
-        for k, v in mpairs(x):
-          runPostProcessor(v, depth-1, r)
+        when typeof(for k, v in mpairs(x): v) is PostProcessTypes:
+          for k, v in mpairs(x):
+            runPostProcessor(v, depth-1, r)
     else:
-      template runPostFunc(x: untyped) =
-        runPostProcessor(x, depth-1, r)
-      assignObjectImpl(x, runPostFunc)
+      for v in fields(x):
+        when typeof(v) is PostProcessTypes:
+          runPostProcessor(v, depth-1, r)
 
 proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =
   if depth < 0:
@@ -401,21 +377,24 @@ proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =
     when compiles(postProcess(x, r)):
       postProcess(x, r)
     else:
-      if x != nil: runPostProcessor(x[], depth-1, r)
+      when T is PostProcessTypes:
+        if x != nil: runPostProcessor(x[], depth-1, r)
 
 proc runPostProcessor*[S, T](x: var array[S, T], depth: int; r: var Rand) =
   if depth < 0:
-    reset(x)
+    when not supportsCopyMem(T): reset(x)
   else:
     when compiles(postProcess(x, r)):
       postProcess(x, r)
     else:
-      for i in low(x)..high(x):
-        runPostProcessor(x[i], depth-1, r)
+      when T is PostProcessTypes:
+        for i in low(x)..high(x):
+          runPostProcessor(x[i], depth-1, r)
 
 proc myMutator[T](x: var T; sizeIncreaseHint: Natural; r: var Rand) {.nimcall.} =
   runMutator(x, sizeIncreaseHint, true, r)
-  runPostProcessor(x, MaxInitializeDepth, r)
+  when T is PostProcessTypes:
+    runPostProcessor(x, MaxInitializeDepth, r)
 
 template mutatorImpl(target, mutator, typ: untyped) =
   {.pragma: nocov, codegenDecl: "__attribute__((no_sanitize(\"coverage\"))) $# $#$#".}

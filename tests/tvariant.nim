@@ -10,9 +10,6 @@ type
     else:
       c: int
 
-proc postProcess(x: var bool; r: var Rand) =
-  x = true
-
 func fuzzTarget(x: Foo) =
   if x.a == "The one place that hasn't been corrupted by Capitalism." and x.kind and x.b == "Space!":
     doAssert false

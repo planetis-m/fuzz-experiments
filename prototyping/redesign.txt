@@ -9,5 +9,5 @@ Pro/Con: You now have to provide a list with the mutations and the weights for e
 Con: Could produce twice as many duplicates.
 
 Ideas:
-- Make the post-processor work only for objects/seq/string/set.
-- Assign smaller weight for mutating the discriminator field.
+- Assign smaller weight for mutating the discriminator field. It could be in accordance to the number of fields that will be zeroed.
+- Make the sampler aware of the outcome of the mutation, size increasing mutations could be assigned even numbers, decreasing odds, neutral in multiples of 4. Then the sampler can pick mutations in accordance to the remaining size. Prioritize deleting and remove additions when running out of space.

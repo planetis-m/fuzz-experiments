@@ -140,8 +140,8 @@ proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
 
-proc mutate*[T: enum](value: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(cast[set[T]](mutateValue(cast[uint](value), r) and cast[uint](fullSet(T))))
+proc mutate*[T](value: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(cast[set[T]](mutateValue(cast[uint](value), r) and cast[uint](fullSet(T)))) # BUG: fix arrays!
 
 macro enumFullRange(a: typed): untyped =
   nnkBracket.newTree(a.getType[1][1..^1])

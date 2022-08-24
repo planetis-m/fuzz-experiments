@@ -75,7 +75,7 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
   else:
     let index = rand(r, value.high)
     runMutator(value[index], remainingSize, true, r)
-    result = value != previous
+    result = value != previous # runMutator item may still fail to generate a new mutation.
 
 proc mutateByteSizedSeq*[T: ByteSized](value: sink seq[T]; userMax, sizeIncreaseHint: int;
     r: var Rand): seq[T] =
@@ -366,10 +366,10 @@ proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
           for k, v in mpairs(x):
             runPostProcessor(v, depth-1, r)
     else:
-      # Only ordinal types are allowed for case discriminators so...
-      for v in fields(x):
-        when typeof(v) is PostProcessTypes:
-          runPostProcessor(v, depth-1, r)
+      template runPostFunc(x: untyped) =
+        when typeof(x) is PostProcessTypes:
+          runPostProcessor(x, depth-1, r)
+      assignObjectImpl(x, runPostFunc)
 
 proc runPostProcessor*[T](x: var ref T, depth: int; r: var Rand) =
   if depth < 0:
@@ -465,15 +465,15 @@ proc commonImpl(target, mutator: NimNode): NimNode =
   result = getAst(mutatorImpl(target, mutator, typ))
 
 macro defaultMutator*(target: proc) =
-  ## Implements the interface for running LibFuzzer's fuzzing loop, where `target`'s single
-  ## immutatable parameter, is the structured input type.
+  ## Implements the interface for running LibFuzzer's fuzzing loop, where func `target`'s
+  ## single immutatable parameter, is the structured input type.
   ## It uses the default mutator that also includes the post-processor.
   ## It's recommended that the experimental "strict funcs" feature is enabled.
   commonImpl(target, bindSym"myMutator")
 
 macro customMutator*(target, mutator: proc) =
-  ## Implements the interface for running LibFuzzer's fuzzing loop, where `target`'s single
-  ## immutatable parameter, is the structured input type.
+  ## Implements the interface for running LibFuzzer's fuzzing loop, where func `target`'s
+  ## single immutatable parameter, is the structured input type.
   ## It uses `mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand)`
   ## to generate new mutations. This has the flexibility of transforming the input and/or
   ## mutating some part of it via the `runMutator` proc. Then applying the reverse transform to

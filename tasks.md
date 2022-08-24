@@ -60,13 +60,13 @@ DONE after 4/8
 - [X] Write a macro for supporting variant objects/tuples. (2.5h) 23/8
 - [X] Replace runPost fields() with macro. (0.50h) 23/8
 - [X] Make the post-processor work only for objects/array/seq/string/set/ref/tuple/distinct. (1.0h) 24/8
+- [X] Fix range types. (0.5h) 24/8
 
 TODO
 ====
 
-- [ ] Safe enum/set mutator, needs a macro (try to reuse rank from enumutils). (1h)
-- [ ] Write some docs and a ref example.
-- [ ] Fix range types.
+- [X] Safe enum/set mutator, needs a macro (try to reuse rank from enumutils). (1h+)
+- [X] Write some docs and a ref example. (0.5h+) 24/8
 
 MAYBE
 =====

@@ -1,5 +1,6 @@
 import std/[random, macros], common, sampler, utf8fix
-from typetraits import distinctBase, supportsCopyMem, enumLen
+from std/typetraits import distinctBase, supportsCopyMem, enumLen
+from std/enumutils import symbolRank
 
 when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -24,6 +25,7 @@ proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges:
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*[T: enum](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -136,7 +138,7 @@ proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
 
 proc mutate*[T: Ordinal and enum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(T(mutateEnum(value.ord-low(T).ord, enumLen(T), r)+low(T).ord))
+  repeatMutate(T(mutateEnum(value.symbolRank, enumLen(T), r)+low(T).ord))
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))
@@ -171,6 +173,9 @@ proc sample(x: bool; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample(x: char; s: var Sampler; r: var Rand; res: var int) =
+  sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
+
+proc sample[T: enum](x: T; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
@@ -220,6 +225,10 @@ proc pick(x: var bool; sizeIncreaseHint: int; enforceChanges: bool;
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
 proc pick(x: var char; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+
+proc pick[T: enum](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
@@ -286,6 +295,9 @@ proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: va
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
 proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  mutate(x, sizeIncreaseHint, enforceChanges, r)
+
+proc runMutator*[T: enum](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
 proc runMutator*[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =

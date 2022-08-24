@@ -1,4 +1,4 @@
-import std/[random, macros, enumutils, typetraits], common, sampler, utf8fix
+import std/[random, macros, setutils, enumutils, typetraits], common, sampler, utf8fix
 
 when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -24,6 +24,7 @@ proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; 
 proc runMutator*(x: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T: enum](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
+proc runMutator*[T](x: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*(x: var string; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var ref T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -142,6 +143,9 @@ proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool
 macro enumFullRange(a: typed): untyped =
   nnkBracket.newTree(a.getType[1][1..^1])
 
+proc mutate*[T](value: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(cast[set[T]](mutateValue(cast[uint](value), r) and cast[uint](fullSet(T))))
+
 proc mutate*[T: HoleyEnum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(enumFullRange(T)[mutateEnum(value.symbolRank, enumLen(T), r)])
 
@@ -184,6 +188,9 @@ proc sample(x: char; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample[T: enum](x: T; s: var Sampler; r: var Rand; res: var int) =
+  sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
+
+proc sample[T](x: set[T]; s: var Sampler; r: var Rand; res: var int) =
   sampleAttempt(attempt(s, r, DefaultMutateWeight, res))
 
 proc sample[T: SomeNumber](x: T; s: var Sampler; r: var Rand; res: var int) =
@@ -237,6 +244,10 @@ proc pick(x: var char; sizeIncreaseHint: int; enforceChanges: bool;
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
 proc pick[T: enum](x: var T; sizeIncreaseHint: int; enforceChanges: bool;
+    r: var Rand; res: var int) =
+  pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
+
+proc pick[T](x: var set[T]; sizeIncreaseHint: int; enforceChanges: bool;
     r: var Rand; res: var int) =
   pickMutate(mutate(x, sizeIncreaseHint, enforceChanges, r))
 
@@ -308,6 +319,9 @@ proc runMutator*(x: var char; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc runMutator*[T: enum](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   mutate(x, sizeIncreaseHint, enforceChanges, r)
 
+proc runMutator*[T](x: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  mutate(x, sizeIncreaseHint, enforceChanges, r)
+
 proc runMutator*[T: tuple|object](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   when compiles(mutate(x, sizeIncreaseHint, enforceChanges, r)):
     mutate(x, sizeIncreaseHint, enforceChanges, r)
@@ -365,6 +379,11 @@ proc runPostProcessor*[T](x: var seq[T], depth: int; r: var Rand) =
       when T is PostProcessTypes:
         for i in 0..<x.len:
           runPostProcessor(x[i], depth-1, r)
+
+proc runPostProcessor*[T](x: var set[T], depth: int; r: var Rand) =
+  when compiles(postProcess(x, r)):
+    if depth >= 0:
+      postProcess(x, r)
 
 proc runPostProcessor*(x: var string, depth: int; r: var Rand) =
   if depth < 0:

@@ -61,12 +61,13 @@ DONE after 4/8
 - [X] Replace runPost fields() with macro. (0.50h) 23/8
 - [X] Make the post-processor work only for objects/array/seq/string/set/ref/tuple/distinct. (1.0h) 24/8
 - [X] Fix range types. (0.5h) 24/8
+- [X] Safe enum/set mutator, needs a macro (try to reuse rank from enumutils). (2.5h)
+- [X] Write some docs and a ref example. (0.5h) 24/8
 
 TODO
 ====
 
-- [X] Safe enum/set mutator, needs a macro (try to reuse rank from enumutils). (1h+)
-- [X] Write some docs and a ref example. (0.5h+) 24/8
+- [ ] Sets that compile to static arrays need a different solution!
 
 MAYBE
 =====

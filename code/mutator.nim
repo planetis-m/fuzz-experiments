@@ -40,14 +40,14 @@ proc flipBit*[T](value: T; r: var Rand): T =
   result = value
   flipBit(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), r)
 
-when not defined(fuzzerStandalone):
+when defined(fuzzerStandalone):
+  proc mutateValue*[T](value: T; r: var Rand): T =
+    flipBit(value, r)
+else:
   proc mutateValue*[T](value: T; r: var Rand): T =
     result = value
     let size = mutate(cast[ptr UncheckedArray[byte]](addr result), sizeof(T), sizeof(T))
     zeroMem(result.addr +! size, sizeof(T) - size)
-else:
-  proc mutateValue*[T](value: T; r: var Rand): T =
-    flipBit(value, r)
 
 proc mutateEnum*(index, itemCount: int; r: var Rand): int =
   if itemCount <= 1: 0
@@ -141,7 +141,16 @@ proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
 
 proc mutate*[T](value: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  repeatMutate(cast[set[T]](mutateValue(cast[uint](value), r) and cast[uint](fullSet(T)))) # BUG: fix arrays!
+  when high(T).ord < 8:
+    repeatMutate(cast[set[T]](mutateValue(cast[uint8](value), r) and cast[uint8](fullSet(T))))
+  elif high(T).ord < 16:
+    repeatMutate(cast[set[T]](mutateValue(cast[uint16](value), r) and cast[uint16](fullSet(T))))
+  elif high(T).ord < 32:
+    repeatMutate(cast[set[T]](mutateValue(cast[uint32](value), r) and cast[uint32](fullSet(T))))
+  elif high(T).ord < 64:
+    repeatMutate(cast[set[T]](mutateValue(cast[uint64](value), r) and cast[uint64](fullSet(T))))
+  else:
+    {.error: "Not implemented yet!".}
 
 macro enumFullRange(a: typed): untyped =
   nnkBracket.newTree(a.getType[1][1..^1])

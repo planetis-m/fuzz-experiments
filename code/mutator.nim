@@ -1,6 +1,4 @@
-import std/[random, macros], common, sampler, utf8fix
-from std/typetraits import distinctBase, supportsCopyMem, enumLen
-from std/enumutils import symbolRank
+import std/[random, macros, enumutils, typetraits], common, sampler, utf8fix
 
 when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -79,8 +77,9 @@ proc mutateSeq*[T](value: var seq[T]; previous: seq[T]; userMax, sizeIncreaseHin
     runMutator(value[index], remainingSize, true, r)
     result = value != previous # runMutator item may still fail to generate a new mutation.
 
-proc mutateByteSizedSeq*[T: ByteSized](value: sink seq[T]; userMax, sizeIncreaseHint: int;
+proc mutateByteSizedSeq*[T: ByteSized and not range](value: sink seq[T]; userMax, sizeIncreaseHint: int;
     r: var Rand): seq[T] =
+  # This seq mutator uses more memory than the default one.
   if r.rand(0..20) == 0:
     result = @[]
   else:
@@ -137,7 +136,10 @@ proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
 
-proc mutate*[T: Ordinal and enum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+#proc mutate*[T: HoleyEnum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  #repeatMutate(T(mutateEnum(value.symbolRank, enumLen(T), r)+low(T).ord)) # needs macro.
+
+proc mutate*[T: OrdinalEnum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(T(mutateEnum(value.symbolRank, enumLen(T), r)+low(T).ord))
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =

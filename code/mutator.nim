@@ -98,7 +98,7 @@ proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Ra
   else:
     let oldSize = value.len
     result = value
-    result.setLen(max(1, oldSize + sizeIncreaseHint))
+    result.setLen(max(1, oldSize + r.rand(sizeIncreaseHint)))
     result.setLen(mutate(cast[ptr UncheckedArray[byte]](addr result[0]), oldSize, result.len))
 
 proc mutateUtf8String*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string {.inline.} =
@@ -139,8 +139,11 @@ proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
 
-#proc mutate*[T: HoleyEnum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  #repeatMutate(T(mutateEnum(value.symbolRank, enumLen(T), r)+low(T).ord)) # needs macro.
+macro enumFullRange(a: typed): untyped =
+  nnkBracket.newTree(a.getType[1][1..^1])
+
+proc mutate*[T: HoleyEnum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(enumFullRange(T)[mutateEnum(value.symbolRank, enumLen(T), r)])
 
 proc mutate*[T: OrdinalEnum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(T(mutateEnum(value.symbolRank, enumLen(T), r)+low(T).ord))

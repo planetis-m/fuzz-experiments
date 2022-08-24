@@ -1,5 +1,5 @@
 import std/[random, macros], common, sampler, utf8fix
-from typetraits import distinctBase, supportsCopyMem
+from typetraits import distinctBase, supportsCopyMem, enumLen
 
 when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -48,7 +48,7 @@ else:
   proc mutateValue*[T](value: T; r: var Rand): T =
     flipBit(value, r)
 
-proc mutateEnum*(index, itemCount: uint; r: var Rand): int =
+proc mutateEnum*(index, itemCount: int; r: var Rand): int =
   if itemCount <= 1: 0
   else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
@@ -132,8 +132,11 @@ proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: va
 proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))
 
-proc mutate*[T: range|enum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
+
+proc mutate*[T: Ordinal and enum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(T(mutateEnum(value.ord-low(T).ord, enumLen(T), r)+low(T).ord))
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))

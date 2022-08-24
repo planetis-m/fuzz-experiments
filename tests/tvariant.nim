@@ -1,5 +1,5 @@
-# Should not leak, crash or the address sanitizer complain. Is the dictionary limit ~64bytes?
-import mutator, random
+# Should not leak, crash or the address sanitizer complain. oft: Is the dictionary item limit ~64bytes?
+import mutator
 
 type
   Foo = object

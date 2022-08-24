@@ -141,17 +141,7 @@ proc mutate*[T: range](value: var T; sizeIncreaseHint: int; enforceChanges: bool
   repeatMutate(clamp(mutateValue(value, r), low(T), high(T)))
 
 proc mutate*[T](value: var set[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
-  when high(T).ord < 8:
-    repeatMutate(cast[set[T]](mutateValue(cast[uint8](value), r)) * fullSet(T))
-  elif high(T).ord < 16:
-    repeatMutate(cast[set[T]](mutateValue(cast[uint16](value), r)) * fullSet(T))
-  elif high(T).ord < 32:
-    repeatMutate(cast[set[T]](mutateValue(cast[uint32](value), r)) * fullSet(T))
-  elif high(T).ord < 64:
-    repeatMutate(cast[set[T]](mutateValue(cast[uint64](value), r)) * fullSet(T))
-  else:
-    const setSize = nextPowerOfTwo(high(T).ord+1) div 8
-    repeatMutate(cast[set[T]](mutateValue(cast[array[setSize, byte]](value), r)) * fullSet(T))
+  repeatMutate(mutateValue(value, r) * fullSet(T))
 
 macro enumFullRange(a: typed): untyped =
   nnkBracket.newTree(a.getType[1][1..^1])

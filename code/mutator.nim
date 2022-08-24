@@ -89,6 +89,8 @@ proc mutateByteSizedSeq*[T: ByteSized and not range](value: sink seq[T]; userMax
     when T is bool:
       # Fix bool values so UBSan stops complaining.
       for i in 0..<result.len: result[i] = cast[seq[byte]](result)[i] != 0.byte
+    elif T is range:
+      for i in 0..<result.len: result[i] = clamp(result[i], low(T), high(T))
 
 proc mutateString*(value: sink string; userMax, sizeIncreaseHint: int; r: var Rand): string =
   if r.rand(0..20) == 0:
@@ -107,6 +109,8 @@ proc mutateArray*[S, T](value: array[S, T]; r: var Rand): array[S, T] {.inline.}
   result = mutateValue(value, r)
   when T is bool:
     for i in low(result)..high(result): result[i] = cast[array[S, byte]](result)[i] != 0.byte
+  elif T is range:
+    for i in low(result)..high(result): result[i] = clamp(result[i], low(T), high(T))
 
 template repeatMutate*(call: untyped) =
   if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:

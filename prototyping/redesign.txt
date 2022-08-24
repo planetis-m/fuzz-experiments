@@ -10,4 +10,4 @@ Con: Could produce twice as many duplicates.
 
 Ideas:
 - Assign smaller weight for mutating the discriminator field. It could be in accordance to the number of fields that will be zeroed.
-- Make the sampler aware of the outcome of the mutation, size increasing mutations could be assigned even numbers, decreasing odds, neutral in multiples of 4. Then the sampler can pick mutations in accordance to the remaining size. Prioritize deleting and remove additions when running out of space.
+- Make the sampler aware of the outcome of the mutation, size increasing mutations could be assigned even numbers, decreasing odds, neutral in multiples of 4. Then the sampler can pick mutations in accordance to the remaining size. Prioritize deleting and remove additions when running out of space. Short of like utility AIs work.

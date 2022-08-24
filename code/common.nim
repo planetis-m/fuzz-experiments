@@ -64,6 +64,9 @@ proc foldObjectBody(tmpSym, typeNode, mFunc: NimNode): NimNode =
     error("unhandled kind: " & $typeNode.kind, typeNode)
 
 macro assignObjectImpl*(output: typed; mFunc: untyped): untyped =
+  ## This macro is used for safely mutating object fields with `mFunc`.
+  ## For case discriminators it makes a temporary and assigns it inside a
+  ## cast uncheckedAssign section. This ensures a =destroy call is generated.
   let typeSym = getTypeInst(output)
   result = newStmtList()
   let x = foldObjectBody(output, typeSym.getTypeImpl, mFunc)

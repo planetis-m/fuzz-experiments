@@ -59,7 +59,7 @@ DONE after 4/8
 - [X] Plug-in utf8 strings (compile-time switch). 23/8
 - [X] Write a macro for supporting variant objects/tuples. (2.5h+) 23/8
 - [X] Replace runPost fields() with macro. (0.50h) 23/8
-- [X] Make the post-processor work only for objects/array/seq/string/set/ref/tuple. (1.0h) 24/8
+- [X] Make the post-processor work only for objects/array/seq/string/set/ref/tuple/distinct. (1.0h) 24/8
 
 TODO
 ====

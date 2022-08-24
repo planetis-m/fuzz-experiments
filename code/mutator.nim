@@ -5,20 +5,20 @@ when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
     {.emit: "N_CDECL(void, NimMain)(void); NimMain();".}
 
-  proc mutate*(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
+  proc mutate(data: ptr UncheckedArray[byte], len, maxLen: int): int {.
       importc: "LLVMFuzzerMutate".}
 
 template `+!`(p: pointer, s: int): untyped =
   cast[pointer](cast[ByteAddress](p) +% s)
 
 const
-  RandomToDefaultRatio* = 100
-  DefaultMutateWeight* = 1_000_000
-  MaxInitializeDepth* = 200
+  RandomToDefaultRatio = 100 # The chance of returning an uninitalized type.
+  DefaultMutateWeight = 1_000_000 # The default weight of items sampled by the reservoir sampler.
+  MaxInitializeDepth = 200 # The post-processor prunes nested non-copyMem types.
 
 type
-  ByteSized* = int8|uint8|byte|bool|char
-  PostProcessTypes* = (object|tuple|ref|seq|string|array|set|distinct)
+  ByteSized* = int8|uint8|byte|bool|char # Run LibFuzzer's mutate for sequences of these types.
+  PostProcessTypes* = (object|tuple|ref|seq|string|array|set|distinct) ## The post-processor runs only on these types.
 
 proc runMutator*[T: SomeNumber](x: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
 proc runMutator*[T](x: var seq[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand)
@@ -366,6 +366,7 @@ proc runPostProcessor*[T: tuple|object](x: var T, depth: int; r: var Rand) =
           for k, v in mpairs(x):
             runPostProcessor(v, depth-1, r)
     else:
+      # Only ordinal types are allowed for case discriminators so...
       for v in fields(x):
         when typeof(v) is PostProcessTypes:
           runPostProcessor(v, depth-1, r)
@@ -464,7 +465,18 @@ proc commonImpl(target, mutator: NimNode): NimNode =
   result = getAst(mutatorImpl(target, mutator, typ))
 
 macro defaultMutator*(target: proc) =
+  ## Implements the interface for running LibFuzzer's fuzzing loop, where `target`'s single
+  ## immutatable parameter, is the structured input type.
+  ## It uses the default mutator that also includes the post-processor.
+  ## It's recommended that the experimental "strict funcs" feature is enabled.
   commonImpl(target, bindSym"myMutator")
 
 macro customMutator*(target, mutator: proc) =
+  ## Implements the interface for running LibFuzzer's fuzzing loop, where `target`'s single
+  ## immutatable parameter, is the structured input type.
+  ## It uses `mutator: proc (x: var T; sizeIncreaseHint: Natural, r: var Rand)`
+  ## to generate new mutations. This has the flexibility of transforming the input and/or
+  ## mutating some part of it via the `runMutator` proc. Then applying the reverse transform to
+  ## convert it back to the original representation.
+  ## It's recommended that the experimental "strict funcs" feature is enabled.
   commonImpl(target, mutator)

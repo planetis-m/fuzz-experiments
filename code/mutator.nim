@@ -48,7 +48,11 @@ else:
   proc mutateValue*[T](value: T; r: var Rand): T =
     flipBit(value, r)
 
-proc mutateEnum*(index, itemCount: int; r: var Rand): int =
+proc mutateSlice*[T](value: T; x: Slice[T]; r: var Rand): T =
+  let max = cast[uint64](x.b) - cast[uint64](x.a)
+  result = cast[T](mutateValue(cast[uint64](value), r) mod (max + 1) + cast[uint64](x.a))
+
+proc mutateEnum*(index, itemCount: uint; r: var Rand): int =
   if itemCount <= 1: 0
   else: (index + 1 + r.rand(itemCount - 1)) mod itemCount
 
@@ -131,6 +135,9 @@ proc mutate*(value: var bool; sizeIncreaseHint: int; enforceChanges: bool; r: va
 
 proc mutate*(value: var char; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))
+
+proc mutate*[T: range|enum](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  repeatMutate(mutateSlice(value, low(T)..high(T), r))
 
 proc mutate*[T: SomeNumber](value: var T; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateValue(value, r))

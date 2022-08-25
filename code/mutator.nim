@@ -176,10 +176,7 @@ proc mutate*[T](value: var Option[T]; sizeIncreaseHint: int; enforceChanges: boo
     discard
   else:
     if not isSome(value):
-      when T is ref:
-        value = some(new(T))
-      else:
-        value = some(default(T))
+      value = some(default(T))
     runMutator(value.get, sizeIncreaseHint, enforceChanges, r)
 
 template sampleAttempt(call: untyped) =

@@ -64,3 +64,8 @@ DONE after 4/8
 - [X] Safe enum/set mutator, needs a macro (try to reuse rank from enumutils). (2.5h)
 - [X] Write some docs and a ref example. (0.5h) 24/8
 - [X] Sets that compile to static arrays need a different solution! (1.0h) 24/8
+
+TODO
+====
+
+- [ ] Need a `==` implementation for case objects

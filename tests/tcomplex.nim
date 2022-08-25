@@ -9,7 +9,7 @@ type
     of Br: discard
     of Text: textStr: string
 
-proc `==`(a, b: ContentNode): bool {.noSideEffect.} =
+func `==`(a, b: ContentNode): bool =
   if a.kind != b.kind: return false
   case a.kind
   of P: return a.pChildren == b.pChildren
@@ -17,6 +17,7 @@ proc `==`(a, b: ContentNode): bool {.noSideEffect.} =
   of Text: return a.textStr == b.textStr
 
 func fuzzTarget(x: ContentNode) =
+  when defined(dumpFuzzInput): debugEcho(x)
   let data = ContentNode(kind: P, pChildren: @[
     ContentNode(kind: Text, textStr: "mychild"),
     ContentNode(kind: Br)

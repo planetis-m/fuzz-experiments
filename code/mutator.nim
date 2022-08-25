@@ -1,4 +1,4 @@
-import std/[random, macros, setutils, enumutils, typetraits, math], common, sampler, utf8fix
+import std/[random, macros, setutils, enumutils, typetraits, options], common, sampler, utf8fix
 
 when not defined(fuzzerStandalone):
   proc initialize(): cint {.exportc: "LLVMFuzzerInitialize".} =
@@ -170,6 +170,17 @@ proc mutate*(value: var string; sizeIncreaseHint: int; enforceChanges: bool; r: 
 proc mutate*[S; T: SomeNumber|bool|char](value: var array[S, T]; sizeIncreaseHint: int;
     enforceChanges: bool; r: var Rand) =
   repeatMutate(mutateArray(value, r))
+
+proc mutate*[T](value: var Option[T]; sizeIncreaseHint: int; enforceChanges: bool; r: var Rand) =
+  if not enforceChanges and rand(r, RandomToDefaultRatio - 1) == 0:
+    discard
+  else:
+    if not isSome(value):
+      when T is ref:
+        value = some(new(T))
+      else:
+        value = some(default(T))
+    runMutator(value.get, sizeIncreaseHint, enforceChanges, r)
 
 template sampleAttempt(call: untyped) =
   inc res

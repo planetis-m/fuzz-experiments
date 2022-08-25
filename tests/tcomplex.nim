@@ -9,12 +9,18 @@ type
     of Br: discard
     of Text: textStr: string
 
+proc `==`(a, b: ContentNode): bool {.noSideEffect.} =
+  if a.kind != b.kind: return false
+  case a.kind
+  of P: return a.pChildren == b.pChildren
+  of Br: return true
+  of Text: return a.textStr == b.textStr
+
 func fuzzTarget(x: ContentNode) =
   let data = ContentNode(kind: P, pChildren: @[
     ContentNode(kind: Text, textStr: "mychild"),
     ContentNode(kind: Br)
   ])
-  {.cast(noSideEffect).}:
-    doAssert $x != $data
+  doAssert x != data
 
 defaultMutator(fuzzTarget)

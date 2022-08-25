@@ -484,9 +484,9 @@ template mutatorImpl(target, mutator, typ: untyped) =
   proc customMutatorImpl(x: var typ; data: openArray[byte]; maxLen: int;
       r: var Rand): int {.nosan.} =
     if data.len > 1:
-      var pos = 1
-      fromData(data, pos, x)
-      #x = move getInput(x, data)
+      #var pos = 1
+      #fromData(data, pos, x)
+      x = getInput(x, data)
     FuzzMutator(mutator)(x, maxLen-x.byteSize, r)
     result = x.byteSize+1 # +1 for the skipped byte
     if result <= maxLen:

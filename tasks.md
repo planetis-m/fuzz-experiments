@@ -65,3 +65,4 @@ DONE after 4/8
 - [X] Write some docs and a ref example. (0.5h) 24/8
 - [X] Sets that compile to static arrays need a different solution! (1.0h) 24/8
 - [X] Investigate bug in variant object example and fix crash due to cache. (1.0h) 25/8
+- [X] Work on releasing drchaos and fix all bugs I know of. (3.5h) 25/8-26/8

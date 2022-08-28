@@ -66,4 +66,4 @@ DONE after 4/8
 - [X] Sets that compile to static arrays need a different solution! (1.0h) 24/8
 - [X] Investigate bug in variant object example and fix crash due to cache. (1.0h) 25/8
 - [X] Work on releasing drchaos and fix all bugs I know of. (3.5h) 25/8-26/8
-- [X] Fixed remaining bugs and wrote a patch for nim-testutils (2.5h) 27/8-28/8
+- [X] Fixed remaining bugs and wrote a patch for nim-testutils, wrote readme, released (3.0h) 27/8-28/8

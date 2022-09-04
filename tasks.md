@@ -67,3 +67,10 @@ DONE after 4/8
 - [X] Investigate bug in variant object example and fix crash due to cache. (1.0h) 25/8
 - [X] Work on releasing drchaos and fix all bugs I know of. (3.5h) 25/8-26/8
 - [X] Fixed remaining bugs and wrote a patch for nim-testutils, wrote readme, released (3.0h) 27/8-28/8
+
+
+DONE after 2/9
+==============
+
+- [X] Track down and fix bug #9 (3.5h) 2/9-3/9
+- [X] Work on examples and various issues (1.75h) 4/9

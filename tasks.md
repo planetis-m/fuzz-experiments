@@ -73,4 +73,4 @@ DONE after 2/9
 ==============
 
 - [X] Track down and fix bug #9 (3.5h) 2/9-3/9
-- [X] Work on examples and various issues (1.75h) 4/9
+- [X] Work on examples and various issues (2.05h) 4/9

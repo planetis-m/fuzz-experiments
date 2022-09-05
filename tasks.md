@@ -74,3 +74,4 @@ DONE after 2/9
 
 - [X] Track down and fix bug #9 (3.5h) 2/9-3/9
 - [X] Work on examples and various issues (2.05h) 4/9
+- [X] Add default feature, examples, debug new bugs. (6.0h) 5/9
